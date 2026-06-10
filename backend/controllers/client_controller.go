@@ -3,137 +3,80 @@ package controllers
 import (
 	"net/http"
 
-	"churma-keygen/backend/config"
-	"churma-keygen/backend/models"
+	"churma-keygen/backend/dtos"
+	"churma-keygen/backend/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
-type CreateClientRequest struct {
-	Name      string `json:"name" binding:"required"`
-	OwnerName string `json:"owner_name"`
-	Phone     string `json:"phone"`
+type ClientController struct {
+	clientService services.ClientService
 }
 
-type UpdateClientRequest struct {
-	Name      string `json:"name" binding:"required"`
-	OwnerName string `json:"owner_name"`
-	Phone     string `json:"phone"`
+func NewClientController(clientService services.ClientService) *ClientController {
+	return &ClientController{clientService: clientService}
 }
 
-func GetClients(c *gin.Context) {
-	var clients []models.Client
-	// Preload licenses to show them on dashboard
-	err := config.DB.Preload("Licenses").Order("name ASC").Find(&clients).Error
+func (ctrl *ClientController) GetClients(c *gin.Context) {
+	clients, err := ctrl.clientService.GetAll()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch clients"})
+		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: "Failed to fetch clients"})
 		return
 	}
 
 	c.JSON(http.StatusOK, clients)
 }
 
-func GetClientStats(c *gin.Context) {
-	var clientCount int64
-	var activeCount int64
-	var suspendedCount int64
-	var unassignedCount int64
-	var revokedCount int64
-
-	config.DB.Model(&models.Client{}).Count(&clientCount)
-	config.DB.Model(&models.License{}).Where("status = ?", "ACTIVE").Count(&activeCount)
-	config.DB.Model(&models.License{}).Where("status = ?", "SUSPENDED").Count(&suspendedCount)
-	config.DB.Model(&models.License{}).Where("status = ?", "UNASSIGNED").Count(&unassignedCount)
-	config.DB.Model(&models.License{}).Where("status = ?", "REVOKED").Count(&revokedCount)
-
-	c.JSON(http.StatusOK, gin.H{
-		"total_clients":       clientCount,
-		"active_licenses":     activeCount,
-		"suspended_licenses":  suspendedCount,
-		"unassigned_licenses": unassignedCount,
-		"revoked_licenses":    revokedCount,
-	})
-}
-
-func CreateClient(c *gin.Context) {
-	var req CreateClientRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (ctrl *ClientController) GetClientStats(c *gin.Context) {
+	stats, err := ctrl.clientService.GetStats()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: "Failed to fetch client statistics"})
 		return
 	}
 
-	client := models.Client{
-		ID:        uuid.New(),
-		Name:      req.Name,
-		OwnerName: req.OwnerName,
-		Phone:     req.Phone,
+	c.JSON(http.StatusOK, stats)
+}
+
+func (ctrl *ClientController) CreateClient(c *gin.Context) {
+	var req dtos.CreateClientRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dtos.ErrorResponse{Error: err.Error()})
+		return
 	}
 
-	err := config.DB.Create(&client).Error
+	client, err := ctrl.clientService.Create(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create client"})
+		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: "Failed to create client"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, client)
 }
 
-func UpdateClient(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid client ID format"})
-		return
-	}
-
-	var req UpdateClientRequest
+func (ctrl *ClientController) UpdateClient(c *gin.Context) {
+	id := c.Param("id")
+	var req dtos.UpdateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dtos.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	var client models.Client
-	err = config.DB.First(&client, "id = ?", id).Error
+	client, err := ctrl.clientService.Update(id, req)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
-		return
-	}
-
-	client.Name = req.Name
-	client.OwnerName = req.OwnerName
-	client.Phone = req.Phone
-
-	err = config.DB.Save(&client).Error
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update client"})
+		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, client)
 }
 
-func DeleteClient(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+func (ctrl *ClientController) DeleteClient(c *gin.Context) {
+	id := c.Param("id")
+	err := ctrl.clientService.Delete(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid client ID format"})
+		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	var client models.Client
-	err = config.DB.First(&client, "id = ?", id).Error
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Client not found"})
-		return
-	}
-
-	// GORM soft delete
-	err = config.DB.Delete(&client).Error
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete client"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Client deleted successfully"})
+	c.JSON(http.StatusOK, dtos.MessageResponse{Message: "Client deleted successfully"})
 }
