@@ -11,7 +11,10 @@ import (
 
 	"churma-keygen/backend/config"
 	"churma-keygen/backend/crypto"
+	"churma-keygen/backend/dtos"
 	"churma-keygen/backend/models"
+	"churma-keygen/backend/repositories"
+	"churma-keygen/backend/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -78,10 +81,16 @@ func setupTestEnvironment(t *testing.T) *gin.Engine {
 		t.Fatalf("Failed to seed license: %v", err)
 	}
 
-	// 4. Setup router
+	// 4. Instantiate Layers for Testing
+	licenseRepo := repositories.NewLicenseRepository(db)
+	activationLogRepo := repositories.NewActivationLogRepository(db)
+	activationService := services.NewActivationService(licenseRepo, activationLogRepo)
+	activationCtrl := NewActivationController(activationService)
+
+	// 5. Setup router
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.POST("/api/v1/client/activate", ActivateLicense)
+	r.POST("/api/v1/client/activate", activationCtrl.ActivateLicense)
 	return r
 }
 
@@ -96,7 +105,7 @@ func TestActivateLicense_Success_FirstTime(t *testing.T) {
 	r := setupTestEnvironment(t)
 	defer teardownTestEnvironment()
 
-	reqBody := ActivateRequest{
+	reqBody := dtos.ActivateRequest{
 		LicenseCode: "TEST-XXXX-YYYY",
 		HardwareID:  "HWID-COMPUTER-1",
 	}
@@ -156,7 +165,7 @@ func TestActivateLicense_Success_Reactivation(t *testing.T) {
 		"hardware_id": "HWID-COMPUTER-1",
 	})
 
-	reqBody := ActivateRequest{
+	reqBody := dtos.ActivateRequest{
 		LicenseCode: "TEST-XXXX-YYYY",
 		HardwareID:  "HWID-COMPUTER-1",
 	}
@@ -183,7 +192,7 @@ func TestActivateLicense_Error_HWIDMismatch(t *testing.T) {
 		"hardware_id": "MACHINE-A",
 	})
 
-	reqBody := ActivateRequest{
+	reqBody := dtos.ActivateRequest{
 		LicenseCode: "TEST-XXXX-YYYY",
 		HardwareID:  "MACHINE-B", // trying to spoof on different computer
 	}
@@ -211,7 +220,7 @@ func TestActivateLicense_Error_InvalidCode(t *testing.T) {
 	r := setupTestEnvironment(t)
 	defer teardownTestEnvironment()
 
-	reqBody := ActivateRequest{
+	reqBody := dtos.ActivateRequest{
 		LicenseCode: "WRONG-CODE-1234",
 		HardwareID:  "HWID-SOME-MACHINE",
 	}
@@ -242,7 +251,7 @@ func TestActivateLicense_Error_Suspended(t *testing.T) {
 	// Suspended status
 	config.DB.Model(&testLicense).Update("status", "SUSPENDED")
 
-	reqBody := ActivateRequest{
+	reqBody := dtos.ActivateRequest{
 		LicenseCode: "TEST-XXXX-YYYY",
 		HardwareID:  "HWID-COMPUTER-1",
 	}
@@ -274,7 +283,7 @@ func TestActivateLicense_Error_Expired(t *testing.T) {
 	pastTime := time.Now().Add(-24 * time.Hour)
 	config.DB.Model(&testLicense).Update("expires_at", &pastTime)
 
-	reqBody := ActivateRequest{
+	reqBody := dtos.ActivateRequest{
 		LicenseCode: "TEST-XXXX-YYYY",
 		HardwareID:  "HWID-COMPUTER-1",
 	}
