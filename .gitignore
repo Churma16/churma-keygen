@@ -1,0 +1,5 @@
+/backend/.env
+/.idea/
+/backend/public_key.pem
+/backend/private_key.pem
+

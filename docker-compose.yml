@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: keygen-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: keygen_secure_pg_pass
+      POSTGRES_DB: churma_keygen
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d churma_keygen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - keygen-network
+
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: keygen-app
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: keygen_secure_pg_pass
+      DB_NAME: churma_keygen
+      JWT_SECRET: churma_pos_superadmin_dashboard_secret_key_2026
+      RSA_PRIVATE_KEY_PATH: /app/keys/private_key.pem
+      RSA_PUBLIC_KEY_PATH: /app/keys/public_key.pem
+    volumes:
+      - keys-data:/app/keys
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - keygen-network
+
+volumes:
+  pg-data:
+    driver: local
+  keys-data:
+    driver: local
+
+networks:
+  keygen-network:
+    driver: bridge
