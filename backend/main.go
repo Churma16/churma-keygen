@@ -106,7 +106,7 @@ func main() {
 
 	// Health Check using struct response
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, dtos.MessageResponse{Message: "Churma Keygen API is active and running!"})
+		c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Churma Keygen API is active and running!", nil))
 	})
 
 	// Public Routes
@@ -154,7 +154,7 @@ func main() {
 		r.Static("/assets", "./dist/assets")
 		r.NoRoute(func(c *gin.Context) {
 			if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
-				c.JSON(http.StatusNotFound, dtos.ErrorResponse{Error: "API route not found"})
+				c.JSON(http.StatusNotFound, dtos.NewErrorResponse(http.StatusNotFound, "API route not found"))
 				return
 			}
 			c.File("./dist/index.html")

@@ -121,16 +121,29 @@ func TestActivateLicense_Success_FirstTime(t *testing.T) {
 		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
-	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	var envelope map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &envelope)
 
-	if resp["status"] != "ACTIVE" {
-		t.Errorf("Expected status to be ACTIVE, got %v", resp["status"])
+	meta, ok := envelope["meta"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected meta object in response")
 	}
-	if resp["client_name"] != "Toko Test Sejahtera" {
-		t.Errorf("Expected client name Toko Test Sejahtera, got %v", resp["client_name"])
+	if meta["status"] != "success" {
+		t.Errorf("Expected meta status to be success, got %v", meta["status"])
 	}
-	if resp["token"] == nil || resp["token"] == "" {
+
+	data, ok := envelope["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected data object in response")
+	}
+
+	if data["status"] != "ACTIVE" {
+		t.Errorf("Expected data status to be ACTIVE, got %v", data["status"])
+	}
+	if data["client_name"] != "Toko Test Sejahtera" {
+		t.Errorf("Expected client name Toko Test Sejahtera, got %v", data["client_name"])
+	}
+	if data["token"] == nil || data["token"] == "" {
 		t.Errorf("Expected JWT token to be issued")
 	}
 

@@ -20,17 +20,17 @@ func NewAuthController(authService services.AuthService) *AuthController {
 func (ctrl *AuthController) Login(c *gin.Context) {
 	var req dtos.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dtos.ErrorResponse{Error: "Username and password are required"})
+		c.JSON(http.StatusBadRequest, dtos.NewErrorResponse(http.StatusBadRequest, "Username and password are required"))
 		return
 	}
 
 	resp, err := ctrl.authService.Login(req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, dtos.ErrorResponse{Error: err.Error()})
+		c.JSON(http.StatusUnauthorized, dtos.NewErrorResponse(http.StatusUnauthorized, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Login berhasil", resp))
 }
 
 func (ctrl *AuthController) GetMe(c *gin.Context) {
@@ -40,9 +40,9 @@ func (ctrl *AuthController) GetMe(c *gin.Context) {
 
 	resp, err := ctrl.authService.GetMe(userID.(string), username.(string), role.(string))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: err.Error()})
+		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Profil admin berhasil ditemukan", resp))
 }

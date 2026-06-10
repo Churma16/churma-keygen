@@ -20,63 +20,63 @@ func NewLicenseController(licenseService services.LicenseService) *LicenseContro
 func (ctrl *LicenseController) GetLicenses(c *gin.Context) {
 	licenses, err := ctrl.licenseService.GetAll()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: "Failed to fetch licenses"})
+		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch licenses"))
 		return
 	}
 
-	c.JSON(http.StatusOK, licenses)
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Daftar lisensi berhasil ditemukan", licenses))
 }
 
 func (ctrl *LicenseController) GenerateLicense(c *gin.Context) {
 	var req dtos.GenerateLicenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dtos.ErrorResponse{Error: err.Error()})
+		c.JSON(http.StatusBadRequest, dtos.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
 
 	license, err := ctrl.licenseService.Generate(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: err.Error()})
+		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, license)
+	c.JSON(http.StatusCreated, dtos.NewSuccessResponse(http.StatusCreated, "Lisensi berhasil dibuat", license))
 }
 
 func (ctrl *LicenseController) UpdateLicenseStatus(c *gin.Context) {
 	id := c.Param("id")
 	var req dtos.UpdateLicenseStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dtos.ErrorResponse{Error: err.Error()})
+		c.JSON(http.StatusBadRequest, dtos.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
 
 	license, err := ctrl.licenseService.UpdateStatus(id, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: err.Error()})
+		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, license)
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Status lisensi berhasil diperbarui", license))
 }
 
 func (ctrl *LicenseController) DeleteLicense(c *gin.Context) {
 	id := c.Param("id")
 	err := ctrl.licenseService.Delete(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: err.Error()})
+		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, dtos.MessageResponse{Message: "License deleted successfully"})
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "License deleted successfully", nil))
 }
 
 func (ctrl *LicenseController) GetActivationLogs(c *gin.Context) {
 	logs, err := ctrl.licenseService.GetActivationLogs()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dtos.ErrorResponse{Error: "Failed to fetch activation logs"})
+		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch activation logs"))
 		return
 	}
 
-	c.JSON(http.StatusOK, logs)
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Log aktivasi berhasil ditemukan", logs))
 }

@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"churma-keygen/backend/dtos"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -70,9 +72,7 @@ func RateLimiter() gin.HandlerFunc {
 
 		if cl.count > maxRequests {
 			clientsMu.Unlock()
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "Too many requests. Please try again later.",
-			})
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, dtos.NewErrorResponse(http.StatusTooManyRequests, "Too many requests. Please try again later."))
 			return
 		}
 
