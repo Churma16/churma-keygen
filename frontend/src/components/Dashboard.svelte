@@ -104,7 +104,8 @@
             });
             if (res.status === 401) handleSessionExpired();
             if (res.ok) {
-                stats = await res.json();
+                const body = await res.json();
+                stats = body.data;
             }
         } catch (e) {
             console.error(e);
@@ -119,7 +120,8 @@
                 headers: {'Authorization': `Bearer ${token}`}
             });
             if (res.ok) {
-                licenses = await res.json();
+                const body = await res.json();
+                licenses = body.data;
             }
         } catch (e) {
             console.error(e);
@@ -132,7 +134,8 @@
                 headers: {'Authorization': `Bearer ${token}`}
             });
             if (res.ok) {
-                clients = await res.json();
+                const body = await res.json();
+                clients = body.data;
             }
         } catch (e) {
             console.error(e);
@@ -145,7 +148,8 @@
                 headers: {'Authorization': `Bearer ${token}`}
             });
             if (res.ok) {
-                logs = await res.json();
+                const body = await res.json();
+                logs = body.data;
             }
         } catch (e) {
             console.error(e);
@@ -184,8 +188,8 @@
                 fetchClients();
                 fetchStats();
             } else {
-                const d = await res.json();
-                showToast(d.error || 'Gagal menambahkan klien.', 'error');
+                const body = await res.json();
+                showToast(body.meta?.message || body.error || 'Gagal menambahkan klien.', 'error');
             }
         } catch (e) {
             showToast('Koneksi terputus.', 'error');

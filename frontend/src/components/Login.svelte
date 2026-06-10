@@ -22,11 +22,13 @@
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
+      const body = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Autentikasi gagal. Periksa kembali username & password.');
+        throw new Error(body.meta?.message || body.error || 'Autentikasi gagal. Periksa kembali username & password.');
       }
+
+      const data = body.data;
 
       // Save credentials & notify parent
       localStorage.setItem('admin_token', data.token);

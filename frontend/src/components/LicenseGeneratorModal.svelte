@@ -46,12 +46,13 @@
         }),
       });
 
-      const data = await response.json();
+      const body = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Gagal membuat kunci lisensi baru.');
+        throw new Error(body.meta?.message || body.error || 'Gagal membuat kunci lisensi baru.');
       }
 
+      const data = body.data;
       generatedKey = data.license_code;
       dispatch('success');
     } catch (err) {
