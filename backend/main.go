@@ -9,8 +9,11 @@ import (
 	"churma-keygen/backend/config"
 	"churma-keygen/backend/controllers"
 	"churma-keygen/backend/crypto"
+	"churma-keygen/backend/dtos"
 	"churma-keygen/backend/middleware"
 	"churma-keygen/backend/models"
+	"churma-keygen/backend/repositories"
+	"churma-keygen/backend/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -44,7 +47,13 @@ func main() {
 	}
 	fmt.Println("Database migrations completed successfully.")
 
-	// 3. Seed Default Admin User if empty
+	// 3. Instantiate Repositories
+	userRepo := repositories.NewUserRepository(db)
+	clientRepo := repositories.NewClientRepository(db)
+	licenseRepo := repositories.NewLicenseRepository(db)
+	activationLogRepo := repositories.NewActivationLogRepository(db)
+
+	// 4. Seed Default Admin User if empty
 	var adminCount int64
 	db.Model(&models.User{}).Where("username = ?", "admin").Count(&adminCount)
 	if adminCount == 0 {
@@ -53,26 +62,38 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to hash default admin password: %v", err)
 		}
-
+		
 		admin := models.User{
 			ID:           uuid.New(),
 			Username:     "admin",
 			PasswordHash: string(hashedPassword),
 			Role:         "SUPERADMIN",
 		}
-		if err := db.Create(&admin).Error; err != nil {
+		if err := userRepo.Create(&admin); err != nil {
 			log.Fatalf("Failed to seed default admin: %v", err)
 		}
 		fmt.Println("Default administrator created (username: admin, password: admin123).")
 	}
 
-	// 4. Initialize RSA Keypair
+	// 5. Initialize RSA Keypair
 	err = crypto.InitRSAKeys()
 	if err != nil {
 		log.Fatalf("Failed to initialize RSA keys: %v", err)
 	}
 
-	// 5. Setup Gin Web Server
+	// 6. Instantiate Services
+	authService := services.NewAuthService(userRepo)
+	clientService := services.NewClientService(clientRepo, licenseRepo)
+	licenseService := services.NewLicenseService(licenseRepo, clientRepo, activationLogRepo)
+	activationService := services.NewActivationService(licenseRepo, activationLogRepo)
+
+	// 7. Instantiate Controllers
+	authCtrl := controllers.NewAuthController(authService)
+	clientCtrl := controllers.NewClientController(clientService)
+	licenseCtrl := controllers.NewLicenseController(licenseService)
+	activationCtrl := controllers.NewActivationController(activationService)
+
+	// 8. Setup Gin Web Server
 	gin.SetMode(gin.ReleaseMode)
 	if os.Getenv("ENV") != "prod" {
 		gin.SetMode(gin.DebugMode)
@@ -83,48 +104,48 @@ func main() {
 	// Apply CORS
 	r.Use(middleware.CORSMiddleware())
 
-	// Health Check
+	// Health Check using struct response
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "Churma Keygen API is active and running!"})
+		c.JSON(http.StatusOK, dtos.MessageResponse{Message: "Churma Keygen API is active and running!"})
 	})
 
 	// Public Routes
 	api := r.Group("/api/v1")
 	{
 		// Administrator Login
-		api.POST("/auth/login", controllers.Login)
+		api.POST("/auth/login", authCtrl.Login)
 
 		// Public Client Activation Gateway (with Rate Limiting)
-		api.POST("/client/activate", middleware.RateLimiter(), controllers.ActivateLicense)
+		api.POST("/client/activate", middleware.RateLimiter(), activationCtrl.ActivateLicense)
 
-		// Public Endpoint to retrieve the RSA Public Key (for clients to hardcode/verify JWT)
-		api.GET("/public-key", controllers.GetPublicKey)
+		// Public Endpoint to retrieve the RSA Public Key
+		api.GET("/public-key", activationCtrl.GetPublicKey)
 	}
 
 	// Protected Admin Dashboard Routes
-	admin := r.Group("/api/v1/admin")
-	admin.Use(middleware.AdminAuth())
+	adminGroup := r.Group("/api/v1/admin")
+	adminGroup.Use(middleware.AdminAuth())
 	{
 		// Profile info
-		admin.GET("/me", controllers.GetMe)
+		adminGroup.GET("/me", authCtrl.GetMe)
 
 		// Clients Management
-		admin.GET("/clients", controllers.GetClients)
-		admin.POST("/clients", controllers.CreateClient)
-		admin.PUT("/clients/:id", controllers.UpdateClient)
-		admin.DELETE("/clients/:id", controllers.DeleteClient)
+		adminGroup.GET("/clients", clientCtrl.GetClients)
+		adminGroup.POST("/clients", clientCtrl.CreateClient)
+		adminGroup.PUT("/clients/:id", clientCtrl.UpdateClient)
+		adminGroup.DELETE("/clients/:id", clientCtrl.DeleteClient)
 
 		// Stats
-		admin.GET("/stats", controllers.GetClientStats)
+		adminGroup.GET("/stats", clientCtrl.GetClientStats)
 
 		// Licenses Management
-		admin.GET("/licenses", controllers.GetLicenses)
-		admin.POST("/licenses", controllers.GenerateLicense)
-		admin.PUT("/licenses/:id/status", controllers.UpdateLicenseStatus)
-		admin.DELETE("/licenses/:id", controllers.DeleteLicense)
+		adminGroup.GET("/licenses", licenseCtrl.GetLicenses)
+		adminGroup.POST("/licenses", licenseCtrl.GenerateLicense)
+		adminGroup.PUT("/licenses/:id/status", licenseCtrl.UpdateLicenseStatus)
+		adminGroup.DELETE("/licenses/:id", licenseCtrl.DeleteLicense)
 
 		// Audit Activation Logs
-		admin.GET("/logs", controllers.GetActivationLogs)
+		adminGroup.GET("/logs", licenseCtrl.GetActivationLogs)
 	}
 
 	// Serve Svelte frontend SPA built assets statically if the dist/ directory is present
@@ -133,7 +154,7 @@ func main() {
 		r.Static("/assets", "./dist/assets")
 		r.NoRoute(func(c *gin.Context) {
 			if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
-				c.JSON(http.StatusNotFound, gin.H{"error": "API route not found"})
+				c.JSON(http.StatusNotFound, dtos.ErrorResponse{Error: "API route not found"})
 				return
 			}
 			c.File("./dist/index.html")
@@ -146,7 +167,7 @@ func main() {
 		port = "8080"
 	}
 	address := fmt.Sprintf(":%s", port)
-
+	
 	fmt.Printf("Server listening on http://localhost:%s\n", port)
 	if err := r.Run(address); err != nil {
 		log.Fatalf("Failed to run web server: %v", err)
