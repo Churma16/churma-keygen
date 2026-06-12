@@ -1,0 +1,22 @@
+FROM alpine:3.19
+WORKDIR /app
+
+# Install certificates and timezone data
+RUN apk add --no-cache ca-certificates tzdata
+
+# Copy prebuilt Go binary
+COPY server-app ./main
+
+# Create folder for persistent keys
+RUN mkdir -p /app/keys
+
+# Set environment variables for production
+ENV ENV=prod
+ENV HOST=0.0.0.0
+ENV PORT=8080
+ENV RSA_PRIVATE_KEY_PATH=/app/keys/private_key.pem
+ENV RSA_PUBLIC_KEY_PATH=/app/keys/public_key.pem
+
+EXPOSE 8080
+
+CMD ["./main"]

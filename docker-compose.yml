@@ -19,15 +19,18 @@ services:
     networks:
       - keygen-network
 
-  app:
+  backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
-    container_name: keygen-app
+      dockerfile: Dockerfile.backend
+    container_name: keygen-backend
     restart: always
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
+      ENV: prod
+      HOST: 0.0.0.0
+      PORT: 8080
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: postgres
@@ -41,6 +44,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - keygen-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: keygen-frontend
+    restart: always
+    ports:
+      - "8083:80"
+    depends_on:
+      - backend
     networks:
       - keygen-network
 
