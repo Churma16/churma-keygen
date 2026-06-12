@@ -64,7 +64,7 @@ func (s *licenseServiceImpl) Generate(req dtos.GenerateLicenseRequest) (*dtos.Li
 	}
 
 	trialLimit := req.TrialLimit
-	if trialLimit < 0 {
+	if trialLimit < -1 {
 		trialLimit = 100
 	}
 
