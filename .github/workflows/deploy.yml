@@ -1,0 +1,72 @@
+name: Build and Deploy Application
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      # --- Build Frontend ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '25'
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Inject Frontend Environment Variables
+        working-directory: ./frontend
+        run: |
+          echo 'VITE_API_BASE_URL="https://api-keygen.churma.codes/api/v1"' >> .env
+
+      - name: Build Frontend Application
+        working-directory: ./frontend
+        run: npm run build
+
+      # --- Build Backend ---
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+      - name: Build Backend Application
+        working-directory: ./backend
+        env:
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -o ../server-app .
+
+      # --- Deploy to VPS ---
+      - name: Deploy Files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          # Copy the prebuilt server-app, dist folder, Dockerfiles, nginx.conf, and docker-compose.yml
+          source: "server-app,frontend/dist/,Dockerfile.backend,Dockerfile.frontend,nginx.conf,docker-compose.yml"
+          target: "/root/churma-keygen"
+
+      - name: Restart Docker Containers on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /root/churma-keygen
+            # Move frontend/dist to ./dist to match the Dockerfile expectations
+            rm -rf dist
+            mv frontend/dist dist
+            rm -rf frontend
+            # Restart all containers in the stack
+            docker compose up -d --build
