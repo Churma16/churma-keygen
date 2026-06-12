@@ -1,22 +1,11 @@
 <script>
-  import Login from './components/Login.svelte';
-  import Dashboard from './components/Dashboard.svelte';
-  import { onMount } from 'svelte';
-
-  let isLoggedIn = false;
-
-  onMount(() => {
-    const token = localStorage.getItem('admin_token');
-    isLoggedIn = !!token;
-  });
-
-  function handleLoginSuccess() {
-    isLoggedIn = true;
-  }
+  import Login from './pages/Login.svelte';
+  import Dashboard from './pages/Dashboard.svelte';
+  import { authStore } from './stores/authStore';
 </script>
 
-{#if isLoggedIn}
+{#if $authStore.isLoggedIn}
   <Dashboard />
 {:else}
-  <Login on:loginSuccess={handleLoginSuccess} />
+  <Login />
 {/if}
