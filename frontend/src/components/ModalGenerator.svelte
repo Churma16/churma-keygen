@@ -1,17 +1,18 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { X, Copy, CheckCircle2, Award, Calendar, RefreshCw } from 'lucide-svelte';
+  import { licenseStore } from '../stores/licenseStore';
+  import { formatDate, formatQuota } from '../lib/format';
 
   const dispatch = createEventDispatcher();
 
   // Props
-  export let clients = [];
-  export let token = '';
   export let selectedClient = null; // can be pre-selected client object
 
   // State
   let clientID = selectedClient ? selectedClient.id : '';
   let trialLimit = 100;
+  let isUnlimited = false;
   let useExpiration = false;
   let expirationDate = '';
   let generatedKey = '';
@@ -33,26 +34,8 @@
         expiresAt = new Date(expirationDate).toISOString();
       }
 
-      const response = await fetch('/api/v1/admin/licenses', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          client_id: clientID,
-          trial_limit: Number(trialLimit),
-          expires_at: expiresAt
-        }),
-      });
-
-      const body = await response.json();
-
-      if (!response.ok) {
-        throw new Error(body.meta?.message || body.error || 'Gagal membuat kunci lisensi baru.');
-      }
-
-      const data = body.data;
+      const finalTrialLimit = isUnlimited ? -1 : Number(trialLimit);
+      const data = await licenseStore.generateLicense(clientID, finalTrialLimit, expiresAt);
       generatedKey = data.license_code;
       dispatch('success');
     } catch (err) {
@@ -78,22 +61,23 @@
   }
 </script>
 
-<div class="modal modal-open font-sans">
-  <div class="modal-box bg-white border border-base-300 rounded-2xl shadow-2xl relative p-6 max-w-md">
+<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+<div class="modal modal-open font-sans" on:click|self={handleClose}>
+  <div class="modal-box bg-white border border-base-300 rounded-lg shadow-2xl relative p-6 max-w-md">
     <!-- Close Button -->
     <button on:click={handleClose} class="btn btn-sm btn-circle btn-ghost absolute right-4 top-4 text-gray-400 hover:text-gray-600">
       <X size={16} />
     </button>
 
     <div class="flex items-center gap-3 mb-6">
-      <div class="p-2.5 bg-success/80 text-primary rounded-xl border border-success">
+      <div class="p-2.5 bg-success/80 text-primary rounded-md border border-success">
         <Award size={20} />
       </div>
       <h3 class="font-bold text-lg text-primary">Cetak Lisensi Toko</h3>
     </div>
 
     {#if error}
-      <div class="alert alert-error mb-4 py-2 px-3 text-xs rounded-lg text-red-800 bg-error border border-red-200 font-semibold flex items-center gap-2">
+      <div class="alert alert-error mb-4 py-2 px-3 text-xs rounded-md text-red-800 bg-error border border-red-200 font-semibold flex items-center gap-2">
         <span>{error}</span>
       </div>
     {/if}
@@ -112,16 +96,16 @@
               type="text" 
               value={selectedClient.name} 
               disabled 
-              class="input input-bordered w-full bg-base-100 border-base-300 text-gray-500 rounded-xl cursor-not-allowed font-medium text-sm"
+              class="input input-bordered w-full bg-base-100 border-base-300 text-gray-500 rounded-md cursor-not-allowed font-medium text-sm"
             />
           {:else}
             <select 
               id="client-select"
               bind:value={clientID}
-              class="select select-bordered w-full bg-white border-base-300 text-gray-800 rounded-xl focus:outline-none focus:border-primary text-sm"
+              class="select select-bordered w-full bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
             >
               <option value="" disabled selected>Pilih salah satu klien...</option>
-              {#each clients as c}
+              {#each $licenseStore.clients as c}
                 <option value={c.id}>{c.name}</option>
               {/each}
             </select>
@@ -133,17 +117,34 @@
           <label class="label px-0.5 py-1" for="trial-input">
             <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wider">Batas Kuota Transaksi</span>
           </label>
-          <div class="flex items-center gap-3">
-            <input 
-              id="trial-input"
-              type="number" 
-              min="0" 
-              bind:value={trialLimit}
-              class="input input-bordered w-28 bg-white border-base-300 text-gray-800 rounded-xl focus:outline-none focus:border-primary text-sm font-semibold"
-            />
-            <span class="text-[11px] text-gray-400 font-medium leading-relaxed">
-              Isi <strong class="text-gray-700">0</strong> untuk versi tanpa batas (unlimited). Default 100.
-            </span>
+          <div class="flex flex-col gap-2">
+            <!-- Unlimited Checkbox -->
+            <label class="label cursor-pointer justify-start gap-3 py-1 px-0.5" for="unlimited-toggle">
+              <input 
+                id="unlimited-toggle"
+                type="checkbox" 
+                bind:checked={isUnlimited} 
+                class="checkbox checkbox-primary checkbox-sm rounded-md" 
+              />
+              <span class="label-text text-xs font-bold text-gray-600 flex items-center gap-1.5 uppercase tracking-wide">
+                Tanpa Batas Kuota (Unlimited)
+              </span>
+            </label>
+
+            {#if !isUnlimited}
+              <div class="flex items-center gap-3">
+                <input 
+                  id="trial-input"
+                  type="number" 
+                  min="1" 
+                  bind:value={trialLimit}
+                  class="input input-bordered w-28 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm font-semibold"
+                />
+                <span class="text-[11px] text-gray-400 font-medium leading-relaxed">
+                  Default 100 transaksi.
+                </span>
+              </div>
+            {/if}
           </div>
         </div>
 
@@ -168,18 +169,18 @@
             <input 
               type="datetime-local" 
               bind:value={expirationDate}
-              class="input input-bordered w-full bg-white border-base-300 text-gray-800 rounded-xl focus:outline-none focus:border-primary text-sm"
+              class="input input-bordered w-full bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
             />
           </div>
         {/if}
       </div>
 
       <div class="modal-action gap-2 mt-6">
-        <button on:click={handleClose} class="btn btn-outline btn-sm rounded-lg text-xs font-semibold h-9 px-4">Batal</button>
+        <button on:click={handleClose} class="btn btn-outline btn-sm rounded-md text-xs font-semibold h-9 px-4">Batal</button>
         <button 
           on:click={handleGenerate} 
           disabled={isSubmitting || (!selectedClient && !clientID)}
-          class="btn btn-primary btn-sm text-white rounded-lg text-xs font-bold h-9 px-4"
+          class="btn btn-primary btn-sm text-white rounded-md text-xs font-bold h-9 px-4"
         >
           {#if isSubmitting}
             <RefreshCw size={14} class="animate-spin mr-1 text-white" />
@@ -197,7 +198,7 @@
         <h4 class="font-bold text-primary text-md">Lisensi Berhasil Dicetak!</h4>
         <p class="text-xs text-gray-400 mt-1 text-center font-medium">Salin kode di bawah untuk diaktivasi klien secara daring.</p>
         
-        <div class="w-full bg-base-100 border border-base-300 rounded-xl p-4 mt-6 flex items-center justify-between shadow-inner">
+        <div class="w-full bg-base-100 border border-base-300 rounded-md p-4 mt-6 flex items-center justify-between shadow-inner">
           <span class="font-mono text-lg font-bold text-primary tracking-wider select-all">{generatedKey}</span>
           <button 
             on:click={copyKey} 
@@ -212,16 +213,16 @@
         </div>
 
         <!-- Details list in soft grey panel -->
-        <div class="w-full mt-6 flex flex-col gap-2 bg-base-100 rounded-xl border border-base-300 p-4 text-xs text-gray-600 font-semibold leading-relaxed">
+        <div class="w-full mt-6 flex flex-col gap-2 bg-base-100 rounded-md border border-base-300 p-4 text-xs text-gray-600 font-semibold leading-relaxed">
           <span class="font-bold text-primary uppercase text-[10px] tracking-widest block mb-1">Informasi Kunci:</span>
-          <div>• Toko: <strong class="text-gray-800">{selectedClient ? selectedClient.name : clients.find(c => c.id === clientID)?.name}</strong></div>
-          <div>• Kuota Transaksi: <strong class="text-gray-800">{trialLimit === 0 ? 'Tanpa Batas' : `${trialLimit} Transaksi`}</strong></div>
+          <div>• Toko: <strong class="text-gray-800">{selectedClient ? selectedClient.name : $licenseStore.clients.find(c => c.id === clientID)?.name}</strong></div>
+          <div>• Kuota Transaksi: <strong class="text-gray-800">{formatQuota(isUnlimited ? -1 : trialLimit)}</strong></div>
           {#if useExpiration && expirationDate}
-            <div>• Masa Aktif: <strong class="text-gray-800">{new Date(expirationDate).toLocaleString('id-ID')}</strong></div>
+            <div>• Masa Aktif: <strong class="text-gray-800">{formatDate(expirationDate)}</strong></div>
           {/if}
         </div>
 
-        <button on:click={handleClose} class="btn btn-primary btn-sm w-full mt-6 rounded-lg text-white font-bold h-10 text-xs">
+        <button on:click={handleClose} class="btn btn-primary btn-sm w-full mt-6 rounded-md text-white font-bold h-10 text-xs">
           Selesai
         </button>
       </div>
