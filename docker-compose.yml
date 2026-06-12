@@ -6,13 +6,13 @@ services:
     container_name: keygen-postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: keygen_secure_pg_pass
-      POSTGRES_DB: churma_keygen
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - pg-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d churma_keygen"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,10 +33,10 @@ services:
       PORT: 8080
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: keygen_secure_pg_pass
-      DB_NAME: churma_keygen
-      JWT_SECRET: churma_pos_superadmin_dashboard_secret_key_2026
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
       RSA_PRIVATE_KEY_PATH: /app/keys/private_key.pem
       RSA_PUBLIC_KEY_PATH: /app/keys/public_key.pem
     volumes:
