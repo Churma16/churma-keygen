@@ -1,8 +1,8 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { X, Copy, CheckCircle2, Award, Calendar, RefreshCw } from 'lucide-svelte';
-  import { licenseStore } from '../stores/licenseStore';
-  import { formatDate, formatQuota } from '../lib/format';
+  import { licenseStore } from '../store/licenseStore';
+  import { formatDate, formatQuota } from '../../../shared/utils/format';
 
   const dispatch = createEventDispatcher();
 

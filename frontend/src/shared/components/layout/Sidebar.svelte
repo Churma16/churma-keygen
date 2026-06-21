@@ -1,6 +1,6 @@
 <script>
     import { Grid, KeyRound, Users, Activity, Shield, LogOut } from 'lucide-svelte';
-    import { authStore } from '../stores/authStore';
+    import { authStore } from '../../../domains/auth/store/authStore';
 
     export let activeTab = 'overview';
     export let searchQuery = '';

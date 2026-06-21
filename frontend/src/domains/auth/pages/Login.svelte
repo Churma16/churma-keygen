@@ -1,8 +1,8 @@
 <script>
-  import { authStore } from '../stores/authStore';
-  import { authApi } from '../lib/api/auth';
-  import Input from '../components/ui/Input.svelte';
-  import Button from '../components/ui/Button.svelte';
+  import { authStore } from '../store/authStore';
+  import { authApi } from '../api/authApi';
+  import Input from '../../../shared/components/ui/Input.svelte';
+  import Button from '../../../shared/components/ui/Button.svelte';
   import { KeyRound, User, Lock, AlertCircle, Loader2 } from 'lucide-svelte';
 
   let username = '';

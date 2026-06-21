@@ -1,6 +1,6 @@
 <script>
     import { Users, CheckCircle2, ShieldAlert, FileText } from 'lucide-svelte';
-    import { licenseStore } from '../stores/licenseStore';
+    import { licenseStore } from '../store/licenseStore';
 </script>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

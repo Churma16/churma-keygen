@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
-import { clientApi } from '../lib/api/client';
-import { licenseApi } from '../lib/api/license';
-import { logApi } from '../lib/api/log';
+import { clientApi } from '../../client/api/clientApi';
+import { licenseApi } from '../api/licenseApi';
+import { logApi } from '../../log/api/logApi';
 
 function createLicenseStore() {
     const { subscribe, set, update } = writable({

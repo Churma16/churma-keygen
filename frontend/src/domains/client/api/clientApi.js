@@ -1,4 +1,4 @@
-import { baseApi } from './base';
+import { baseApi } from '../../../shared/infra/api/baseApi';
 
 export const clientApi = {
     getAll: () => baseApi.get('/admin/clients'),

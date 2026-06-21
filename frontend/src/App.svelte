@@ -1,7 +1,7 @@
 <script>
-  import Login from './pages/Login.svelte';
-  import Dashboard from './pages/Dashboard.svelte';
-  import { authStore } from './stores/authStore';
+  import Login from './domains/auth/pages/Login.svelte';
+  import Dashboard from './domains/dashboard/pages/Dashboard.svelte';
+  import { authStore } from './domains/auth/store/authStore';
 </script>
 
 {#if $authStore.isLoggedIn}
