@@ -84,40 +84,37 @@
                             {#if lic.status === 'ACTIVE'}
                                 <button
                                         on:click={() => handleUpdateStatus(lic.id, 'SUSPENDED')}
-                                        class="btn btn-xs btn-outline btn-warning gap-1 tooltip"
+                                        class="w-7 h-7 border border-amber-200 hover:bg-amber-50 text-amber-600 rounded-md flex items-center justify-center tooltip tooltip-top"
                                         data-tip="Tangguhkan Lisensi"
                                 >
-                                    <ShieldAlert size={12}/>
-                                    <span>Tangguhkan</span>
+                                    <ShieldAlert size={13}/>
                                 </button>
                             {:else if lic.status === 'SUSPENDED'}
                                 <button
                                         on:click={() => handleUpdateStatus(lic.id, 'ACTIVE')}
-                                        class="btn btn-xs btn-outline btn-primary gap-1 tooltip"
+                                        class="w-7 h-7 border border-emerald-200 hover:bg-emerald-50 text-emerald-700 rounded-md flex items-center justify-center tooltip tooltip-top"
                                         data-tip="Aktifkan Ulang"
                                 >
-                                    <ShieldCheck size={12}/>
-                                    <span>Aktifkan</span>
+                                    <ShieldCheck size={13}/>
                                 </button>
                             {/if}
 
                             {#if lic.status !== 'REVOKED' && lic.status !== 'UNASSIGNED'}
                                 <button
                                         on:click={() => handleUpdateStatus(lic.id, 'REVOKED')}
-                                        class="btn btn-xs btn-outline btn-error gap-1 tooltip"
+                                        class="w-7 h-7 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-md flex items-center justify-center tooltip tooltip-top"
                                         data-tip="Batalkan Lisensi"
                                 >
-                                    <ShieldX size={12}/>
-                                    <span>Batalkan</span>
+                                    <ShieldX size={13}/>
                                 </button>
                             {/if}
 
                             <button
                                     on:click={() => handleDelete(lic.id)}
-                                    class="w-6 h-6 border border-red-100 hover:bg-red-50 text-red-500 rounded-md flex items-center justify-center tooltip"
+                                    class="w-7 h-7 border border-red-100 hover:bg-red-50 text-red-500 rounded-md flex items-center justify-center tooltip tooltip-top"
                                     data-tip="Hapus Lisensi"
                             >
-                                <Trash2 size={12}/>
+                                <Trash2 size={13}/>
                             </button>
                         </div>
                     </td>

@@ -41,6 +41,7 @@
     
     import LogTable from '../../log/components/LogTable.svelte';
     import Settings from '../components/Settings.svelte';
+    import ConfirmationModal from '../../../shared/components/ui/ConfirmationModal.svelte';
 
     // State Management
     let activeTab = $state('overview'); // 'overview' | 'licenses' | 'clients' | 'logs'
@@ -62,6 +63,25 @@
     // Edit client state
     let showEditClientModal = $state(false);
     let editingClient = $state(null);
+
+    // Confirmation modal state
+    let showConfirmModal = $state(false);
+    let confirmModalConfig = $state({
+        title: '',
+        message: '',
+        confirmText: '',
+        variant: 'primary',
+        onConfirm: null
+    });
+
+    function triggerConfirmation(config) {
+        confirmModalConfig = config;
+        showConfirmModal = true;
+    }
+
+    function closeConfirmation() {
+        showConfirmModal = false;
+    }
 
     // Initialize TanStack Query Hooks
     const clientsQuery = useClientsQuery();
@@ -129,34 +149,82 @@
 
     async function handleDeleteClient(event) {
         const id = event.detail;
-        if (!confirm('Apakah Anda yakin ingin menghapus klien ini secara permanen? Semua lisensi miliknya juga akan terhapus.')) return;
-        try {
-            await deleteClientMutation.mutateAsync(id);
-            showToast('Klien berhasil dihapus (Soft Delete).');
-        } catch (e) {
-            showToast(e.message || 'Gagal menghapus klien.', 'error');
-        }
+        triggerConfirmation({
+            title: 'Hapus Klien & Semua Lisensi?',
+            message: 'Apakah Anda yakin ingin menghapus klien ini secara permanen? Semua lisensi milik klien ini juga akan ikut terhapus dari sistem.',
+            confirmText: 'Ya, Hapus Klien',
+            variant: 'error',
+            onConfirm: async () => {
+                try {
+                    await deleteClientMutation.mutateAsync(id);
+                    showToast('Klien berhasil dihapus (Soft Delete).');
+                } catch (e) {
+                    showToast(e.message || 'Gagal menghapus klien.', 'error');
+                }
+                closeConfirmation();
+            }
+        });
     }
 
     async function handleUpdateLicenseStatus(event) {
         const { id, status } = event.detail;
-        try {
-            await updateLicenseStatusMutation.mutateAsync({ id, status });
-            showToast(`Status lisensi berhasil diubah menjadi ${status}.`);
-        } catch (e) {
-            showToast(e.message || 'Gagal mengubah status lisensi.', 'error');
+
+        let title = 'Ubah Status Lisensi?';
+        let message = 'Apakah Anda yakin ingin mengubah status lisensi ini?';
+        let confirmText = 'Ya, Ubah';
+        let variant = 'primary';
+
+        if (status === 'SUSPENDED') {
+            title = 'Tangguhkan Lisensi?';
+            message = 'Apakah Anda yakin ingin menangguhkan lisensi ini? Aplikasi POS klien sementara tidak akan dapat memverifikasi lisensi ini.';
+            confirmText = 'Ya, Tangguhkan';
+            variant = 'warning';
+        } else if (status === 'ACTIVE') {
+            title = 'Aktifkan Ulang Lisensi?';
+            message = 'Apakah Anda yakin ingin mengaktifkan kembali lisensi ini? Aplikasi POS klien akan berfungsi normal.';
+            confirmText = 'Ya, Aktifkan';
+            variant = 'success';
+        } else if (status === 'REVOKED') {
+            title = 'Batalkan Lisensi Permanen?';
+            message = 'Apakah Anda yakin ingin membatalkan lisensi ini? Tindakan ini akan memutus akses POS klien secara permanen dan tidak dapat diaktifkan kembali.';
+            confirmText = 'Ya, Batalkan';
+            variant = 'error';
         }
+
+        triggerConfirmation({
+            title,
+            message,
+            confirmText,
+            variant,
+            onConfirm: async () => {
+                try {
+                    await updateLicenseStatusMutation.mutateAsync({ id, status });
+                    showToast(`Status lisensi berhasil diubah menjadi ${status}.`);
+                } catch (e) {
+                    showToast(e.message || 'Gagal mengubah status lisensi.', 'error');
+                }
+                closeConfirmation();
+            }
+        });
     }
 
     async function handleDeleteLicense(event) {
         const id = event.detail;
-        if (!confirm('Apakah Anda yakin ingin menghapus kunci lisensi ini?')) return;
-        try {
-            await deleteLicenseMutation.mutateAsync(id);
-            showToast('Lisensi berhasil dihapus (Soft Delete).');
-        } catch (e) {
-            showToast(e.message || 'Gagal menghapus lisensi.', 'error');
-        }
+        triggerConfirmation({
+            title: 'Hapus Kunci Lisensi?',
+            message: 'Apakah Anda yakin ingin menghapus kunci lisensi ini secara permanen dari sistem?',
+            confirmText: 'Ya, Hapus',
+            variant: 'error',
+            onConfirm: async () => {
+                try {
+                    await deleteLicenseMutation.mutateAsync(id);
+                    showToast('Lisensi berhasil dihapus (Soft Delete).');
+                } catch (e) {
+                    showToast(e.message || 'Gagal menghapus lisensi.', 'error');
+                }
+                closeConfirmation();
+            }
+        });
     }
 
     async function copyPublicKey() {
@@ -453,6 +521,18 @@
     <ModalGenerator
             selectedClient={selectedClientForLicense}
             on:close={() => showGenModal = false}
+    />
+{/if}
+
+<!-- Modal: Confirmation Modal -->
+{#if showConfirmModal}
+    <ConfirmationModal
+        title={confirmModalConfig.title}
+        message={confirmModalConfig.message}
+        confirmText={confirmModalConfig.confirmText}
+        variant={confirmModalConfig.variant}
+        on:confirm={confirmModalConfig.onConfirm}
+        on:close={closeConfirmation}
     />
 {/if}
 
