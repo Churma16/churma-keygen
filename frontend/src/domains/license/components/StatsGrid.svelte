@@ -1,6 +1,8 @@
 <script>
     import { Users, CheckCircle2, ShieldAlert, FileText } from 'lucide-svelte';
-    import { clientStore } from '../../client/store/clientStore';
+    import { useClientStatsQuery } from '../../client/store/clientQueries';
+
+    const clientStatsQuery = useClientStatsQuery();
 </script>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -13,7 +15,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Klien Toko</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$clientStore.isLoading ? '...' : $clientStore.stats.total_clients}
+                    {$clientStatsQuery.isLoading ? '...' : ($clientStatsQuery.data?.total_clients ?? 0)}
                 </div>
             </div>
         </div>
@@ -28,7 +30,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Lisensi Aktif</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$clientStore.isLoading ? '...' : $clientStore.stats.active_licenses}
+                    {$clientStatsQuery.isLoading ? '...' : ($clientStatsQuery.data?.active_licenses ?? 0)}
                 </div>
             </div>
         </div>
@@ -43,7 +45,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ditangguhkan</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$clientStore.isLoading ? '...' : $clientStore.stats.suspended_licenses}
+                    {$clientStatsQuery.isLoading ? '...' : ($clientStatsQuery.data?.suspended_licenses ?? 0)}
                 </div>
             </div>
         </div>
@@ -58,7 +60,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Belum Dipakai</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$clientStore.isLoading ? '...' : $clientStore.stats.unassigned_licenses}
+                    {$clientStatsQuery.isLoading ? '...' : ($clientStatsQuery.data?.unassigned_licenses ?? 0)}
                 </div>
             </div>
         </div>

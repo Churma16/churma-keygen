@@ -1,14 +1,18 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { X, Copy, CheckCircle2, Award, Calendar, RefreshCw } from 'lucide-svelte';
-  import { licenseStore } from '../store/licenseStore';
-  import { clientStore } from '../../client/store/clientStore';
+  import { useClientsQuery } from '../../client/store/clientQueries';
+  import { useGenerateLicenseMutation } from '../store/licenseQueries';
   import { formatDate, formatQuota } from '../../../shared/utils/format';
 
   const dispatch = createEventDispatcher();
 
   // Props
   export let selectedClient = null; // can be pre-selected client object
+
+  // Svelte queries/mutations
+  const clientsQuery = useClientsQuery();
+  const generateLicenseMutation = useGenerateLicenseMutation();
 
   // State
   let clientID = selectedClient ? selectedClient.id : '';
@@ -17,7 +21,6 @@
   let useExpiration = false;
   let expirationDate = '';
   let generatedKey = '';
-  let isSubmitting = false;
   let error = '';
   let copied = false;
 
@@ -27,7 +30,6 @@
       return;
     }
     error = '';
-    isSubmitting = true;
 
     try {
       let expiresAt = null;
@@ -36,13 +38,15 @@
       }
 
       const finalTrialLimit = isUnlimited ? -1 : Number(trialLimit);
-      const data = await licenseStore.generateLicense(clientID, finalTrialLimit, expiresAt);
+      const data = await $generateLicenseMutation.mutateAsync({
+        clientId: clientID,
+        trialLimit: finalTrialLimit,
+        expiresAt: expiresAt
+      });
       generatedKey = data.license_code;
       dispatch('success');
     } catch (err) {
-      error = err.message;
-    } finally {
-      isSubmitting = false;
+      error = err.message || 'Gagal membuat lisensi.';
     }
   }
 
@@ -106,7 +110,7 @@
               class="select select-bordered w-full bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
             >
               <option value="" disabled selected>Pilih salah satu klien...</option>
-              {#each $clientStore.clients as c}
+              {#each $clientsQuery.data || [] as c}
                 <option value={c.id}>{c.name}</option>
               {/each}
             </select>
@@ -180,10 +184,10 @@
         <button on:click={handleClose} class="btn btn-outline btn-sm rounded-md text-xs font-semibold h-9 px-4">Batal</button>
         <button 
           on:click={handleGenerate} 
-          disabled={isSubmitting || (!selectedClient && !clientID)}
+          disabled={$generateLicenseMutation.isPending || (!selectedClient && !clientID)}
           class="btn btn-primary btn-sm text-white rounded-md text-xs font-bold h-9 px-4"
         >
-          {#if isSubmitting}
+          {#if $generateLicenseMutation.isPending}
             <RefreshCw size={14} class="animate-spin mr-1 text-white" />
           {/if}
           Proses & Cetak Kunci
@@ -216,7 +220,7 @@
         <!-- Details list in soft grey panel -->
         <div class="w-full mt-6 flex flex-col gap-2 bg-base-100 rounded-md border border-base-300 p-4 text-xs text-gray-600 font-semibold leading-relaxed">
           <span class="font-bold text-primary uppercase text-[10px] tracking-widest block mb-1">Informasi Kunci:</span>
-          <div>• Toko: <strong class="text-gray-800">{selectedClient ? selectedClient.name : $clientStore.clients.find(c => c.id === clientID)?.name}</strong></div>
+          <div>• Toko: <strong class="text-gray-800">{selectedClient ? selectedClient.name : ($clientsQuery.data || []).find(c => c.id === clientID)?.name}</strong></div>
           <div>• Kuota Transaksi: <strong class="text-gray-800">{formatQuota(isUnlimited ? -1 : trialLimit)}</strong></div>
           {#if useExpiration && expirationDate}
             <div>• Masa Aktif: <strong class="text-gray-800">{formatDate(expirationDate)}</strong></div>

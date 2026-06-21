@@ -7,11 +7,22 @@
     } from 'lucide-svelte';
     
     import { authStore } from '../../auth/store/authStore';
-    import { licenseStore } from '../../license/store/licenseStore';
-    import { clientStore } from '../../client/store/clientStore';
-    import { logStore } from '../../log/store/logStore';
     import { licenseApi } from '../../license/api/licenseApi';
     import { formatDate } from '../../../shared/utils/format';
+    
+    // TanStack Query Hooks
+    import { 
+        useClientsQuery, 
+        useCreateClientMutation, 
+        useUpdateClientMutation, 
+        useDeleteClientMutation 
+    } from '../../client/store/clientQueries';
+    import { 
+        useLicensesQuery, 
+        useUpdateLicenseStatusMutation, 
+        useDeleteLicenseMutation 
+    } from '../../license/store/licenseQueries';
+    import { useLogsQuery } from '../../log/store/logQueries';
     
     // Shared Layout
     import Sidebar from '../../../shared/components/layout/Sidebar.svelte';
@@ -51,7 +62,17 @@
     let showEditClientModal = false;
     let editingClient = null;
 
-    let isSubmittingClient = false;
+    // Initialize TanStack Query Hooks
+    const clientsQuery = useClientsQuery();
+    const licensesQuery = useLicensesQuery();
+    const logsQuery = useLogsQuery();
+
+    const createClientMutation = useCreateClientMutation();
+    const updateClientMutation = useUpdateClientMutation();
+    const deleteClientMutation = useDeleteClientMutation();
+
+    const updateLicenseStatusMutation = useUpdateLicenseStatusMutation();
+    const deleteLicenseMutation = useDeleteLicenseMutation();
 
     onMount(() => {
         if (!$authStore.isLoggedIn) {
@@ -68,46 +89,35 @@
         }, 3500);
     }
 
-    async function fetchDashboardData() {
-        try {
-            if (activeTab === 'overview') {
-                await Promise.all([
-                    clientStore.fetchStats(),
-                    logStore.fetchLogs()
-                ]);
-            } else if (activeTab === 'licenses') {
-                await Promise.all([
-                    licenseStore.fetchLicenses(),
-                    clientStore.fetchClients()
-                ]);
-            } else if (activeTab === 'clients') {
-                await clientStore.fetchClients();
-            } else if (activeTab === 'logs') {
-                await logStore.fetchLogs();
-            }
-        } catch (err) {
-            showToast('Gagal memuat beberapa data dari server', 'error');
+    // Refresh function triggers TanStack Query refetches depending on the current active tab
+    function handleRefresh() {
+        if (activeTab === 'overview') {
+            $logsQuery.refetch();
+        } else if (activeTab === 'licenses') {
+            $licensesQuery.refetch();
+            $clientsQuery.refetch();
+        } else if (activeTab === 'clients') {
+            $clientsQuery.refetch();
+        } else if (activeTab === 'logs') {
+            $logsQuery.refetch();
         }
     }
 
-    async function createClient(event) {
+    async function handleCreateClient(event) {
         const { name, ownerName, phone } = event.detail;
-        isSubmittingClient = true;
         try {
-            await clientStore.createClient(name, ownerName, phone);
+            await $createClientMutation.mutateAsync({ name, ownerName, phone });
             showToast('Klien baru berhasil ditambahkan.');
             showCreateClientModal = false;
         } catch (e) {
             showToast(e.message || 'Gagal menambahkan klien.', 'error');
-        } finally {
-            isSubmittingClient = false;
         }
     }
 
-    async function updateClient(event) {
+    async function handleUpdateClient(event) {
         const { id, name, ownerName, phone } = event.detail;
         try {
-            await clientStore.updateClient(id, name, ownerName, phone);
+            await $updateClientMutation.mutateAsync({ id, name, ownerName, phone });
             showToast('Identitas klien berhasil diperbarui.');
             showEditClientModal = false;
             editingClient = null;
@@ -116,32 +126,32 @@
         }
     }
 
-    async function deleteClient(event) {
+    async function handleDeleteClient(event) {
         const id = event.detail;
         if (!confirm('Apakah Anda yakin ingin menghapus klien ini secara permanen? Semua lisensi miliknya juga akan terhapus.')) return;
         try {
-            await clientStore.deleteClient(id);
+            await $deleteClientMutation.mutateAsync(id);
             showToast('Klien berhasil dihapus (Soft Delete).');
         } catch (e) {
             showToast(e.message || 'Gagal menghapus klien.', 'error');
         }
     }
 
-    async function updateLicenseStatus(event) {
+    async function handleUpdateLicenseStatus(event) {
         const { id, status } = event.detail;
         try {
-            await licenseStore.updateLicenseStatus(id, status);
+            await $updateLicenseStatusMutation.mutateAsync({ id, status });
             showToast(`Status lisensi berhasil diubah menjadi ${status}.`);
         } catch (e) {
             showToast(e.message || 'Gagal mengubah status lisensi.', 'error');
         }
     }
 
-    async function deleteLicense(event) {
+    async function handleDeleteLicense(event) {
         const id = event.detail;
         if (!confirm('Apakah Anda yakin ingin menghapus kunci lisensi ini?')) return;
         try {
-            await licenseStore.deleteLicense(id);
+            await $deleteLicenseMutation.mutateAsync(id);
             showToast('Lisensi berhasil dihapus (Soft Delete).');
         } catch (e) {
             showToast(e.message || 'Gagal menghapus lisensi.', 'error');
@@ -178,19 +188,14 @@
         activeTab === 'licenses' ? 'Daftar Lisensi' :
         activeTab === 'clients' ? 'Klien Toko' : 'Log Aktivasi';
 
-    // Reactive dynamic loading state based on current tab's store status
-    $: isTabLoading = activeTab === 'overview' ? ($clientStore.isLoading || $logStore.isLoading) :
-                      activeTab === 'licenses' ? ($licenseStore.isLoading || $clientStore.isLoading) :
-                      activeTab === 'clients' ? $clientStore.isLoading :
-                      activeTab === 'logs' ? $logStore.isLoading : false;
-
-    // Reactive fetch on tab changes
-    $: if ($authStore.isLoggedIn && activeTab) {
-        fetchDashboardData();
-    }
+    // Reactive dynamic loading state based on current tab's active query status
+    $: isTabLoading = activeTab === 'overview' ? ($clientsQuery.isFetching || $logsQuery.isFetching) :
+                      activeTab === 'licenses' ? ($licensesQuery.isFetching || $clientsQuery.isFetching) :
+                      activeTab === 'clients' ? $clientsQuery.isFetching :
+                      activeTab === 'logs' ? $logsQuery.isFetching : false;
 
     // Reactive filters
-    $: filteredLicenses = ($licenseStore.licenses || []).filter(lic => {
+    $: filteredLicenses = ($licensesQuery.data || []).filter(lic => {
         const clientName = lic.client_name || (lic.client ? lic.client.name : '');
         const matchesSearch =
             lic.license_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -200,13 +205,13 @@
         return matchesSearch && matchesStatus;
     });
 
-    $: filteredClients = ($clientStore.clients || []).filter(c => {
+    $: filteredClients = ($clientsQuery.data || []).filter(c => {
         return c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (c.owner_name && c.owner_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (c.phone && c.phone.includes(searchQuery));
     });
 
-    $: filteredLogs = ($logStore.logs || []).filter(log => {
+    $: filteredLogs = ($logsQuery.data || []).filter(log => {
         return log.attempted_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
             log.hardware_id_attempt.toLowerCase().includes(searchQuery.toLowerCase()) ||
             log.ip_address.includes(searchQuery) ||
@@ -231,9 +236,9 @@
         <!-- HEADER COMPONENT -->
         <Header 
             breadcrumbPath={breadcrumbPath} 
-            isLoadingData={isLoadingData} 
+            isLoadingData={isTabLoading} 
             on:copyPublicKey={copyPublicKey}
-            on:refresh={fetchDashboardData}
+            on:refresh={handleRefresh}
             on:toggleSidebar={() => isSidebarOpen = !isSidebarOpen}
         />
 
@@ -292,12 +297,12 @@
                                 </tr>
                                 </thead>
                                 <tbody class="divide-y divide-base-300/65">
-                                {#if ($logStore.logs || []).length === 0}
+                                {#if ($logsQuery.data || []).length === 0}
                                     <tr>
                                         <td colspan="4" class="text-center py-8 text-gray-400 font-medium">Tidak ada rekaman log.</td>
                                     </tr>
                                 {:else}
-                                    {#each $logStore.logs.slice(0, 5) as l}
+                                    {#each ($logsQuery.data || []).slice(0, 5) as l}
                                         <tr>
                                             <td class="py-2.5 font-semibold text-primary">
                                                 {#if l.license && l.license.client}
@@ -383,15 +388,15 @@
                         {#if activeTab === 'licenses'}
                             <LicenseTable 
                                 filteredLicenses={filteredLicenses}
-                                on:updateStatus={updateLicenseStatus}
-                                on:deleteLicense={deleteLicense}
+                                on:updateStatus={handleUpdateLicenseStatus}
+                                on:deleteLicense={handleDeleteLicense}
                             />
                         {:else if activeTab === 'clients'}
                             <ClientTable 
                                 filteredClients={filteredClients}
                                 on:openGenModal={openGenModal}
                                 on:editClient={openEditClientModal}
-                                on:deleteClient={deleteClient}
+                                on:deleteClient={handleDeleteClient}
                             />
                         {:else if activeTab === 'logs'}
                             <LogTable 
@@ -408,9 +413,9 @@
 <!-- Modal: Create Client -->
 {#if showCreateClientModal}
     <CreateClientModal 
-        isSubmitting={isSubmittingClient}
+        isSubmitting={$createClientMutation.isPending}
         on:close={() => showCreateClientModal = false}
-        on:submit={createClient}
+        on:submit={handleCreateClient}
     />
 {/if}
 
@@ -418,8 +423,9 @@
 {#if showEditClientModal && editingClient}
     <EditClientModal 
         client={editingClient}
+        isSubmitting={$updateClientMutation.isPending}
         on:close={() => { showEditClientModal = false; editingClient = null; }}
-        on:submit={updateClient}
+        on:submit={handleUpdateClient}
     />
 {/if}
 
