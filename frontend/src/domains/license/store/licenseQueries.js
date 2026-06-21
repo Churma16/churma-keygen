@@ -2,18 +2,18 @@ import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-qu
 import { licenseApi } from '../api/licenseApi';
 
 export function useLicensesQuery() {
-    return createQuery({
+    return createQuery(() => ({
         queryKey: ['licenses'],
         queryFn: async () => {
             const res = await licenseApi.getAll();
             return res.data || [];
         }
-    });
+    }));
 }
 
 export function useGenerateLicenseMutation() {
     const queryClient = useQueryClient();
-    return createMutation({
+    return createMutation(() => ({
         mutationFn: async ({ clientId, trialLimit, expiresAt }) => {
             const res = await licenseApi.generate(clientId, trialLimit, expiresAt);
             return res.data;
@@ -22,12 +22,12 @@ export function useGenerateLicenseMutation() {
             queryClient.invalidateQueries({ queryKey: ['licenses'] });
             queryClient.invalidateQueries({ queryKey: ['clientStats'] });
         }
-    });
+    }));
 }
 
 export function useUpdateLicenseStatusMutation() {
     const queryClient = useQueryClient();
-    return createMutation({
+    return createMutation(() => ({
         mutationFn: async ({ id, status }) => {
             return await licenseApi.updateStatus(id, status);
         },
@@ -35,12 +35,12 @@ export function useUpdateLicenseStatusMutation() {
             queryClient.invalidateQueries({ queryKey: ['licenses'] });
             queryClient.invalidateQueries({ queryKey: ['clientStats'] });
         }
-    });
+    }));
 }
 
 export function useDeleteLicenseMutation() {
     const queryClient = useQueryClient();
-    return createMutation({
+    return createMutation(() => ({
         mutationFn: async (id) => {
             return await licenseApi.delete(id);
         },
@@ -48,5 +48,5 @@ export function useDeleteLicenseMutation() {
             queryClient.invalidateQueries({ queryKey: ['licenses'] });
             queryClient.invalidateQueries({ queryKey: ['clientStats'] });
         }
-    });
+    }));
 }

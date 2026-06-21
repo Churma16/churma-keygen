@@ -93,21 +93,21 @@
     // Refresh function triggers TanStack Query refetches depending on the current active tab
     function handleRefresh() {
         if (activeTab === 'overview') {
-            $logsQuery.refetch();
+            logsQuery.refetch();
         } else if (activeTab === 'licenses') {
-            $licensesQuery.refetch();
-            $clientsQuery.refetch();
+            licensesQuery.refetch();
+            clientsQuery.refetch();
         } else if (activeTab === 'clients') {
-            $clientsQuery.refetch();
+            clientsQuery.refetch();
         } else if (activeTab === 'logs') {
-            $logsQuery.refetch();
+            logsQuery.refetch();
         }
     }
 
     async function handleCreateClient(event) {
         const { name, ownerName, phone } = event.detail;
         try {
-            await $createClientMutation.mutateAsync({ name, ownerName, phone });
+            await createClientMutation.mutateAsync({ name, ownerName, phone });
             showToast('Klien baru berhasil ditambahkan.');
             showCreateClientModal = false;
         } catch (e) {
@@ -118,7 +118,7 @@
     async function handleUpdateClient(event) {
         const { id, name, ownerName, phone } = event.detail;
         try {
-            await $updateClientMutation.mutateAsync({ id, name, ownerName, phone });
+            await updateClientMutation.mutateAsync({ id, name, ownerName, phone });
             showToast('Identitas klien berhasil diperbarui.');
             showEditClientModal = false;
             editingClient = null;
@@ -131,7 +131,7 @@
         const id = event.detail;
         if (!confirm('Apakah Anda yakin ingin menghapus klien ini secara permanen? Semua lisensi miliknya juga akan terhapus.')) return;
         try {
-            await $deleteClientMutation.mutateAsync(id);
+            await deleteClientMutation.mutateAsync(id);
             showToast('Klien berhasil dihapus (Soft Delete).');
         } catch (e) {
             showToast(e.message || 'Gagal menghapus klien.', 'error');
@@ -141,7 +141,7 @@
     async function handleUpdateLicenseStatus(event) {
         const { id, status } = event.detail;
         try {
-            await $updateLicenseStatusMutation.mutateAsync({ id, status });
+            await updateLicenseStatusMutation.mutateAsync({ id, status });
             showToast(`Status lisensi berhasil diubah menjadi ${status}.`);
         } catch (e) {
             showToast(e.message || 'Gagal mengubah status lisensi.', 'error');
@@ -152,7 +152,7 @@
         const id = event.detail;
         if (!confirm('Apakah Anda yakin ingin menghapus kunci lisensi ini?')) return;
         try {
-            await $deleteLicenseMutation.mutateAsync(id);
+            await deleteLicenseMutation.mutateAsync(id);
             showToast('Lisensi berhasil dihapus (Soft Delete).');
         } catch (e) {
             showToast(e.message || 'Gagal menghapus lisensi.', 'error');
@@ -191,13 +191,13 @@
         activeTab === 'settings' ? 'Pengaturan Akun' : 'Log Aktivasi';
 
     // Reactive dynamic loading state based on current tab's active query status
-    $: isTabLoading = activeTab === 'overview' ? ($clientsQuery.isFetching || $logsQuery.isFetching) :
-                      activeTab === 'licenses' ? ($licensesQuery.isFetching || $clientsQuery.isFetching) :
-                      activeTab === 'clients' ? $clientsQuery.isFetching :
-                      activeTab === 'logs' ? $logsQuery.isFetching : false;
+    $: isTabLoading = activeTab === 'overview' ? (clientsQuery.isFetching || logsQuery.isFetching) :
+                      activeTab === 'licenses' ? (licensesQuery.isFetching || clientsQuery.isFetching) :
+                      activeTab === 'clients' ? clientsQuery.isFetching :
+                      activeTab === 'logs' ? logsQuery.isFetching : false;
 
     // Reactive filters
-    $: filteredLicenses = ($licensesQuery.data || []).filter(lic => {
+    $: filteredLicenses = (licensesQuery.data || []).filter(lic => {
         const clientName = lic.client_name || (lic.client ? lic.client.name : '');
         const matchesSearch =
             lic.license_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -207,13 +207,13 @@
         return matchesSearch && matchesStatus;
     });
 
-    $: filteredClients = ($clientsQuery.data || []).filter(c => {
+    $: filteredClients = (clientsQuery.data || []).filter(c => {
         return c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (c.owner_name && c.owner_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (c.phone && c.phone.includes(searchQuery));
     });
 
-    $: filteredLogs = ($logsQuery.data || []).filter(log => {
+    $: filteredLogs = (logsQuery.data || []).filter(log => {
         return log.attempted_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
             log.hardware_id_attempt.toLowerCase().includes(searchQuery.toLowerCase()) ||
             log.ip_address.includes(searchQuery) ||
@@ -302,12 +302,12 @@
                                 </tr>
                                 </thead>
                                 <tbody class="divide-y divide-base-300/65">
-                                {#if ($logsQuery.data || []).length === 0}
+                                {#if (logsQuery.data || []).length === 0}
                                     <tr>
                                         <td colspan="4" class="text-center py-8 text-gray-400 font-medium">Tidak ada rekaman log.</td>
                                     </tr>
                                 {:else}
-                                    {#each ($logsQuery.data || []).slice(0, 5) as l}
+                                    {#each (logsQuery.data || []).slice(0, 5) as l}
                                         <tr>
                                             <td class="py-2.5 font-semibold text-primary">
                                                 {#if l.license && l.license.client}
@@ -422,7 +422,7 @@
 <!-- Modal: Create Client -->
 {#if showCreateClientModal}
     <CreateClientModal 
-        isSubmitting={$createClientMutation.isPending}
+        isSubmitting={createClientMutation.isPending}
         on:close={() => showCreateClientModal = false}
         on:submit={handleCreateClient}
     />
@@ -432,7 +432,7 @@
 {#if showEditClientModal && editingClient}
     <EditClientModal 
         client={editingClient}
-        isSubmitting={$updateClientMutation.isPending}
+        isSubmitting={updateClientMutation.isPending}
         on:close={() => { showEditClientModal = false; editingClient = null; }}
         on:submit={handleUpdateClient}
     />
