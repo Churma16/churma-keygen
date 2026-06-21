@@ -4,14 +4,16 @@
 
     export let activeTab = 'overview';
     export let searchQuery = '';
+    export let isOpen = false;
 
     function handleTabChange(tab) {
         activeTab = tab;
         searchQuery = '';
+        isOpen = false;
     }
 </script>
 
-<aside class="w-64 bg-white border-r border-base-300 min-h-screen flex flex-col justify-between shrink-0">
+<aside class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-base-300 min-h-screen flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto {isOpen ? 'translate-x-0' : '-translate-x-full'}">
     <div>
         <!-- Brand Logo / Title -->
         <div class="px-6 py-5 border-b border-base-300 flex items-center gap-2.5">

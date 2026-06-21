@@ -3,7 +3,7 @@
     import { licenseStore } from '../stores/licenseStore';
 </script>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <!-- Total Clients -->
     <div class="bg-white border border-base-300 rounded-lg p-6 shadow-sm flex items-center justify-between relative overflow-hidden">
         <div class="flex items-center gap-4">

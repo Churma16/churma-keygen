@@ -29,6 +29,7 @@
 
     // State Management
     let activeTab = 'overview'; // 'overview' | 'licenses' | 'clients' | 'logs'
+    let isSidebarOpen = false;
 
     // Search and Filter
     let searchQuery = '';
@@ -184,22 +185,31 @@
     });
 </script>
 
-<div class="min-h-screen bg-base-100 flex font-sans text-gray-700">
+<div class="min-h-screen bg-base-100 flex font-sans text-gray-700 overflow-x-hidden">
     <!-- LEFT SIDEBAR COMPONENT -->
-    <Sidebar bind:activeTab bind:searchQuery />
+    <Sidebar bind:activeTab bind:searchQuery bind:isOpen={isSidebarOpen} />
+
+    {#if isSidebarOpen}
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+        <div 
+            class="fixed inset-0 z-30 bg-black/40 lg:hidden transition-opacity duration-300"
+            on:click={() => isSidebarOpen = false}
+        ></div>
+    {/if}
 
     <!-- MAIN CANVAS -->
-    <main class="flex-1 bg-base-100 min-h-screen flex flex-col">
+    <main class="flex-1 bg-base-100 min-h-screen flex flex-col min-w-0">
         <!-- HEADER COMPONENT -->
         <Header 
             breadcrumbPath={breadcrumbPath} 
             isLoadingData={isLoadingData} 
             on:copyPublicKey={copyPublicKey}
             on:refresh={fetchDashboardData}
+            on:toggleSidebar={() => isSidebarOpen = !isSidebarOpen}
         />
 
         <!-- Page Content Area -->
-        <div class="p-8 flex-1 max-w-6xl w-full mx-auto" style="background-color: #faf8f5">
+        <div class="p-4 sm:p-8 flex-1 max-w-6xl w-full mx-auto" style="background-color: #faf8f5">
             <div class="mb-8">
                 {#if activeTab === 'overview'}
                     <h2 class="text-2xl font-bold text-primary tracking-tight">Selamat Datang, Admin</h2>
