@@ -1,13 +1,14 @@
 <script>
     import { Grid, KeyRound, Users, Activity, Shield, LogOut, Settings } from 'lucide-svelte';
     import { authStore } from '../../../domains/auth/store/authStore';
+    import { push } from 'svelte-spa-router';
 
     export let activeTab = 'overview';
     export let searchQuery = '';
     export let isOpen = false;
 
     function handleTabChange(tab) {
-        activeTab = tab;
+        push(tab === 'overview' ? '/' : '/' + tab);
         searchQuery = '';
         isOpen = false;
     }
