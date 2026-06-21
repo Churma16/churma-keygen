@@ -43,25 +43,25 @@
     import Settings from '../components/Settings.svelte';
 
     // State Management
-    let activeTab = 'overview'; // 'overview' | 'licenses' | 'clients' | 'logs'
-    let isSidebarOpen = false;
+    let activeTab = $state('overview'); // 'overview' | 'licenses' | 'clients' | 'logs'
+    let isSidebarOpen = $state(false);
 
     // Search and Filter
-    let searchQuery = '';
-    let statusFilter = 'ALL';
+    let searchQuery = $state('');
+    let statusFilter = $state('ALL');
 
     // Toast notifications
-    let toastMsg = '';
-    let toastType = 'success'; // 'success' | 'error' | 'info'
+    let toastMsg = $state('');
+    let toastType = $state('success'); // 'success' | 'error' | 'info'
 
     // Modals state
-    let showGenModal = false;
-    let selectedClientForLicense = null;
-    let showCreateClientModal = false;
+    let showGenModal = $state(false);
+    let selectedClientForLicense = $state(null);
+    let showCreateClientModal = $state(false);
 
     // Edit client state
-    let showEditClientModal = false;
-    let editingClient = null;
+    let showEditClientModal = $state(false);
+    let editingClient = $state(null);
 
     // Initialize TanStack Query Hooks
     const clientsQuery = useClientsQuery();
@@ -185,40 +185,50 @@
     }
 
     // Breadcrumb mapping
-    $: breadcrumbPath = activeTab === 'overview' ? 'Ringkasan' :
+    const breadcrumbPath = $derived(
+        activeTab === 'overview' ? 'Ringkasan' :
         activeTab === 'licenses' ? 'Daftar Lisensi' :
         activeTab === 'clients' ? 'Klien Toko' :
-        activeTab === 'settings' ? 'Pengaturan Akun' : 'Log Aktivasi';
+        activeTab === 'settings' ? 'Pengaturan Akun' : 'Log Aktivasi'
+    );
 
     // Reactive dynamic loading state based on current tab's active query status
-    $: isTabLoading = activeTab === 'overview' ? (clientsQuery.isFetching || logsQuery.isFetching) :
-                      activeTab === 'licenses' ? (licensesQuery.isFetching || clientsQuery.isFetching) :
-                      activeTab === 'clients' ? clientsQuery.isFetching :
-                      activeTab === 'logs' ? logsQuery.isFetching : false;
+    const isTabLoading = $derived(
+        activeTab === 'overview' ? (clientsQuery.isFetching || logsQuery.isFetching) :
+        activeTab === 'licenses' ? (licensesQuery.isFetching || clientsQuery.isFetching) :
+        activeTab === 'clients' ? clientsQuery.isFetching :
+        activeTab === 'logs' ? logsQuery.isFetching : false
+    );
 
-    // Reactive filters
-    $: filteredLicenses = (licensesQuery.data || []).filter(lic => {
-        const clientName = lic.client_name || (lic.client ? lic.client.name : '');
-        const matchesSearch =
-            lic.license_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (lic.hardware_id && lic.hardware_id.toLowerCase().includes(searchQuery.toLowerCase()));
-        const matchesStatus = statusFilter === 'ALL' || lic.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    // Reactive filters — $derived ensures re-computation when TanStack Query data arrives
+    const filteredLicenses = $derived(
+        (licensesQuery.data || []).filter(lic => {
+            const clientName = lic.client_name || (lic.client ? lic.client.name : '');
+            const matchesSearch =
+                lic.license_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (lic.hardware_id && lic.hardware_id.toLowerCase().includes(searchQuery.toLowerCase()));
+            const matchesStatus = statusFilter === 'ALL' || lic.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        })
+    );
 
-    $: filteredClients = (clientsQuery.data || []).filter(c => {
-        return c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (c.owner_name && c.owner_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (c.phone && c.phone.includes(searchQuery));
-    });
+    const filteredClients = $derived(
+        (clientsQuery.data || []).filter(c => {
+            return c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (c.owner_name && c.owner_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                (c.phone && c.phone.includes(searchQuery));
+        })
+    );
 
-    $: filteredLogs = (logsQuery.data || []).filter(log => {
-        return log.attempted_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            log.hardware_id_attempt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            log.ip_address.includes(searchQuery) ||
-            log.status.toLowerCase().includes(searchQuery.toLowerCase());
-    });
+    const filteredLogs = $derived(
+        (logsQuery.data || []).filter(log => {
+            return log.attempted_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                log.hardware_id_attempt.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                log.ip_address.includes(searchQuery) ||
+                log.status.toLowerCase().includes(searchQuery.toLowerCase());
+        })
+    );
 </script>
 
 <div class="min-h-screen bg-base-100 flex font-sans text-gray-700 overflow-x-hidden">
