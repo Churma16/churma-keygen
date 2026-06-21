@@ -1,6 +1,6 @@
 <script>
     import { Users, CheckCircle2, ShieldAlert, FileText } from 'lucide-svelte';
-    import { licenseStore } from '../store/licenseStore';
+    import { clientStore } from '../../client/store/clientStore';
 </script>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -13,7 +13,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Klien Toko</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$licenseStore.isLoading ? '...' : $licenseStore.stats.total_clients}
+                    {$clientStore.isLoading ? '...' : $clientStore.stats.total_clients}
                 </div>
             </div>
         </div>
@@ -28,7 +28,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Lisensi Aktif</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$licenseStore.isLoading ? '...' : $licenseStore.stats.active_licenses}
+                    {$clientStore.isLoading ? '...' : $clientStore.stats.active_licenses}
                 </div>
             </div>
         </div>
@@ -43,7 +43,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ditangguhkan</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$licenseStore.isLoading ? '...' : $licenseStore.stats.suspended_licenses}
+                    {$clientStore.isLoading ? '...' : $clientStore.stats.suspended_licenses}
                 </div>
             </div>
         </div>
@@ -58,7 +58,7 @@
             <div>
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Belum Dipakai</div>
                 <div class="text-2xl font-black mt-1 text-primary">
-                    {$licenseStore.isLoading ? '...' : $licenseStore.stats.unassigned_licenses}
+                    {$clientStore.isLoading ? '...' : $clientStore.stats.unassigned_licenses}
                 </div>
             </div>
         </div>

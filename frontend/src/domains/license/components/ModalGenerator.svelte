@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { X, Copy, CheckCircle2, Award, Calendar, RefreshCw } from 'lucide-svelte';
   import { licenseStore } from '../store/licenseStore';
+  import { clientStore } from '../../client/store/clientStore';
   import { formatDate, formatQuota } from '../../../shared/utils/format';
 
   const dispatch = createEventDispatcher();
@@ -105,7 +106,7 @@
               class="select select-bordered w-full bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
             >
               <option value="" disabled selected>Pilih salah satu klien...</option>
-              {#each $licenseStore.clients as c}
+              {#each $clientStore.clients as c}
                 <option value={c.id}>{c.name}</option>
               {/each}
             </select>
@@ -215,7 +216,7 @@
         <!-- Details list in soft grey panel -->
         <div class="w-full mt-6 flex flex-col gap-2 bg-base-100 rounded-md border border-base-300 p-4 text-xs text-gray-600 font-semibold leading-relaxed">
           <span class="font-bold text-primary uppercase text-[10px] tracking-widest block mb-1">Informasi Kunci:</span>
-          <div>• Toko: <strong class="text-gray-800">{selectedClient ? selectedClient.name : $licenseStore.clients.find(c => c.id === clientID)?.name}</strong></div>
+          <div>• Toko: <strong class="text-gray-800">{selectedClient ? selectedClient.name : $clientStore.clients.find(c => c.id === clientID)?.name}</strong></div>
           <div>• Kuota Transaksi: <strong class="text-gray-800">{formatQuota(isUnlimited ? -1 : trialLimit)}</strong></div>
           {#if useExpiration && expirationDate}
             <div>• Masa Aktif: <strong class="text-gray-800">{formatDate(expirationDate)}</strong></div>

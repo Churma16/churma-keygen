@@ -8,6 +8,8 @@
     
     import { authStore } from '../../auth/store/authStore';
     import { licenseStore } from '../../license/store/licenseStore';
+    import { clientStore } from '../../client/store/clientStore';
+    import { logStore } from '../../log/store/logStore';
     import { licenseApi } from '../../license/api/licenseApi';
     import { formatDate } from '../../../shared/utils/format';
     
@@ -36,10 +38,6 @@
     let searchQuery = '';
     let statusFilter = 'ALL';
 
-    // Loading States
-    let isLoadingData = false;
-    let isSubmittingClient = false;
-
     // Toast notifications
     let toastMsg = '';
     let toastType = 'success'; // 'success' | 'error' | 'info'
@@ -53,12 +51,13 @@
     let showEditClientModal = false;
     let editingClient = null;
 
+    let isSubmittingClient = false;
+
     onMount(() => {
         if (!$authStore.isLoggedIn) {
             authStore.logout();
             return;
         }
-        fetchDashboardData();
     });
 
     function showToast(msg, type = 'success') {
@@ -70,13 +69,24 @@
     }
 
     async function fetchDashboardData() {
-        isLoadingData = true;
         try {
-            await licenseStore.fetchAll();
+            if (activeTab === 'overview') {
+                await Promise.all([
+                    clientStore.fetchStats(),
+                    logStore.fetchLogs()
+                ]);
+            } else if (activeTab === 'licenses') {
+                await Promise.all([
+                    licenseStore.fetchLicenses(),
+                    clientStore.fetchClients()
+                ]);
+            } else if (activeTab === 'clients') {
+                await clientStore.fetchClients();
+            } else if (activeTab === 'logs') {
+                await logStore.fetchLogs();
+            }
         } catch (err) {
             showToast('Gagal memuat beberapa data dari server', 'error');
-        } finally {
-            isLoadingData = false;
         }
     }
 
@@ -84,7 +94,7 @@
         const { name, ownerName, phone } = event.detail;
         isSubmittingClient = true;
         try {
-            await licenseStore.createClient(name, ownerName, phone);
+            await clientStore.createClient(name, ownerName, phone);
             showToast('Klien baru berhasil ditambahkan.');
             showCreateClientModal = false;
         } catch (e) {
@@ -97,7 +107,7 @@
     async function updateClient(event) {
         const { id, name, ownerName, phone } = event.detail;
         try {
-            await licenseStore.updateClient(id, name, ownerName, phone);
+            await clientStore.updateClient(id, name, ownerName, phone);
             showToast('Identitas klien berhasil diperbarui.');
             showEditClientModal = false;
             editingClient = null;
@@ -110,7 +120,7 @@
         const id = event.detail;
         if (!confirm('Apakah Anda yakin ingin menghapus klien ini secara permanen? Semua lisensi miliknya juga akan terhapus.')) return;
         try {
-            await licenseStore.deleteClient(id);
+            await clientStore.deleteClient(id);
             showToast('Klien berhasil dihapus (Soft Delete).');
         } catch (e) {
             showToast(e.message || 'Gagal menghapus klien.', 'error');
@@ -168,6 +178,17 @@
         activeTab === 'licenses' ? 'Daftar Lisensi' :
         activeTab === 'clients' ? 'Klien Toko' : 'Log Aktivasi';
 
+    // Reactive dynamic loading state based on current tab's store status
+    $: isTabLoading = activeTab === 'overview' ? ($clientStore.isLoading || $logStore.isLoading) :
+                      activeTab === 'licenses' ? ($licenseStore.isLoading || $clientStore.isLoading) :
+                      activeTab === 'clients' ? $clientStore.isLoading :
+                      activeTab === 'logs' ? $logStore.isLoading : false;
+
+    // Reactive fetch on tab changes
+    $: if ($authStore.isLoggedIn && activeTab) {
+        fetchDashboardData();
+    }
+
     // Reactive filters
     $: filteredLicenses = ($licenseStore.licenses || []).filter(lic => {
         const clientName = lic.client_name || (lic.client ? lic.client.name : '');
@@ -179,13 +200,13 @@
         return matchesSearch && matchesStatus;
     });
 
-    $: filteredClients = ($licenseStore.clients || []).filter(c => {
+    $: filteredClients = ($clientStore.clients || []).filter(c => {
         return c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (c.owner_name && c.owner_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (c.phone && c.phone.includes(searchQuery));
     });
 
-    $: filteredLogs = ($licenseStore.logs || []).filter(log => {
+    $: filteredLogs = ($logStore.logs || []).filter(log => {
         return log.attempted_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
             log.hardware_id_attempt.toLowerCase().includes(searchQuery.toLowerCase()) ||
             log.ip_address.includes(searchQuery) ||
@@ -271,12 +292,12 @@
                                 </tr>
                                 </thead>
                                 <tbody class="divide-y divide-base-300/65">
-                                {#if ($licenseStore.logs || []).length === 0}
+                                {#if ($logStore.logs || []).length === 0}
                                     <tr>
                                         <td colspan="4" class="text-center py-8 text-gray-400 font-medium">Tidak ada rekaman log.</td>
                                     </tr>
                                 {:else}
-                                    {#each $licenseStore.logs.slice(0, 5) as l}
+                                    {#each $logStore.logs.slice(0, 5) as l}
                                         <tr>
                                             <td class="py-2.5 font-semibold text-primary">
                                                 {#if l.license && l.license.client}
@@ -353,7 +374,7 @@
                         </div>
                     </div>
 
-                    {#if $licenseStore.isLoading}
+                    {#if isTabLoading}
                         <div class="flex flex-col items-center justify-center h-80 gap-3">
                             <span class="loading loading-spinner loading-md text-primary"></span>
                             <span class="text-xs text-gray-400 font-semibold">Sinkronisasi data ke PostgreSQL...</span>
