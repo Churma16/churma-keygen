@@ -39,7 +39,7 @@
         successMsg = '';
 
         try {
-            await $updateProfileMutation.mutateAsync({
+            await updateProfileMutation.mutateAsync({
                 username,
                 current_password: currentPassword,
                 new_password: newPassword
@@ -106,7 +106,7 @@
                             placeholder="Username"
                             bind:value={username}
                             class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
-                            disabled={$updateProfileMutation.isPending}
+                            disabled={updateProfileMutation.isPending}
                     />
                 </div>
             </div>
@@ -126,7 +126,7 @@
                             placeholder="Konfirmasi password saat ini"
                             bind:value={currentPassword}
                             class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
-                            disabled={$updateProfileMutation.isPending}
+                            disabled={updateProfileMutation.isPending}
                     />
                 </div>
                 <div class="px-0.5 py-1">
@@ -151,7 +151,7 @@
                             placeholder="Kosongkan jika tidak ingin diubah"
                             bind:value={newPassword}
                             class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
-                            disabled={$updateProfileMutation.isPending}
+                            disabled={updateProfileMutation.isPending}
                     />
                 </div>
             </div>
@@ -171,7 +171,7 @@
                             placeholder="Ulangi password baru"
                             bind:value={confirmPassword}
                             class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
-                            disabled={$updateProfileMutation.isPending}
+                            disabled={updateProfileMutation.isPending}
                     />
                 </div>
             </div>
@@ -182,10 +182,10 @@
     <div class="px-6 py-4 border-t border-base-300 bg-base-100/10 flex justify-end gap-3">
         <button
                 on:click={handleUpdateProfile}
-                disabled={$updateProfileMutation.isPending || !username || !currentPassword}
+                disabled={updateProfileMutation.isPending || !username || !currentPassword}
                 class="btn btn-primary btn-sm text-white rounded-md text-xs font-bold h-9 px-5 flex items-center gap-2"
         >
-            {#if $updateProfileMutation.isPending}
+            {#if updateProfileMutation.isPending}
                 <span class="loading loading-spinner loading-xs"></span>
             {:else}
                 <Save size={14}/>
