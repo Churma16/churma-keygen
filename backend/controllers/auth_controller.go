@@ -46,3 +46,20 @@ func (ctrl *AuthController) GetMe(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Profil admin berhasil ditemukan", resp))
 }
+
+func (ctrl *AuthController) UpdateProfile(c *gin.Context) {
+	var req dtos.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dtos.NewErrorResponse(http.StatusBadRequest, "Username dan password saat ini wajib diisi"))
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	err := ctrl.authService.UpdateProfile(userID.(string), req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dtos.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Profil admin berhasil diperbarui", nil))
+}

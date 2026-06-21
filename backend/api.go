@@ -51,6 +51,7 @@ func SetupRouter(
 	{
 		// Profile info
 		adminGroup.GET("/me", authCtrl.GetMe)
+		adminGroup.PUT("/profile", authCtrl.UpdateProfile)
 
 		// Clients Management
 		adminGroup.GET("/clients", clientCtrl.GetClients)

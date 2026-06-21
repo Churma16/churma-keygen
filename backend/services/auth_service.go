@@ -15,6 +15,7 @@ import (
 type AuthService interface {
 	Login(req dtos.LoginRequest) (*dtos.LoginResponse, error)
 	GetMe(userID, username, role string) (*dtos.UserResponse, error)
+	UpdateProfile(userID string, req dtos.UpdateProfileRequest) error
 }
 
 type authServiceImpl struct {
@@ -68,4 +69,42 @@ func (s *authServiceImpl) GetMe(userID, username, role string) (*dtos.UserRespon
 		Username: username,
 		Role:     role,
 	}, nil
+}
+
+func (s *authServiceImpl) UpdateProfile(userID string, req dtos.UpdateProfileRequest) error {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return errors.New("user tidak ditemukan")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword))
+	if err != nil {
+		return errors.New("password saat ini tidak valid")
+	}
+
+	if req.Username != user.Username {
+		count, err := s.userRepo.CountByUsername(req.Username)
+		if err != nil {
+			return errors.New("gagal memvalidasi username")
+		}
+		if count > 0 {
+			return errors.New("username sudah digunakan oleh akun lain")
+		}
+		user.Username = req.Username
+	}
+
+	if req.NewPassword != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return errors.New("gagal memproses password baru")
+		}
+		user.PasswordHash = string(hashedPassword)
+	}
+
+	err = s.userRepo.Update(user)
+	if err != nil {
+		return errors.New("gagal memperbarui profil")
+	}
+
+	return nil
 }

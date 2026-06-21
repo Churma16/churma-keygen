@@ -10,6 +10,8 @@ type UserRepository interface {
 	FindByUsername(username string) (*models.User, error)
 	CountByUsername(username string) (int64, error)
 	Create(user *models.User) error
+	FindByID(id string) (*models.User, error)
+	Update(user *models.User) error
 }
 
 type GormUserRepository struct {
@@ -37,4 +39,17 @@ func (r *GormUserRepository) CountByUsername(username string) (int64, error) {
 
 func (r *GormUserRepository) Create(user *models.User) error {
 	return r.db.Create(user).Error
+}
+
+func (r *GormUserRepository) FindByID(id string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("id = ?", id).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *GormUserRepository) Update(user *models.User) error {
+	return r.db.Save(user).Error
 }

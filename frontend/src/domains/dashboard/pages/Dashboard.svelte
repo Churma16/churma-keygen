@@ -40,6 +40,7 @@
     import EditClientModal from '../../client/components/EditClientModal.svelte';
     
     import LogTable from '../../log/components/LogTable.svelte';
+    import Settings from '../components/Settings.svelte';
 
     // State Management
     let activeTab = 'overview'; // 'overview' | 'licenses' | 'clients' | 'logs'
@@ -186,7 +187,8 @@
     // Breadcrumb mapping
     $: breadcrumbPath = activeTab === 'overview' ? 'Ringkasan' :
         activeTab === 'licenses' ? 'Daftar Lisensi' :
-        activeTab === 'clients' ? 'Klien Toko' : 'Log Aktivasi';
+        activeTab === 'clients' ? 'Klien Toko' :
+        activeTab === 'settings' ? 'Pengaturan Akun' : 'Log Aktivasi';
 
     // Reactive dynamic loading state based on current tab's active query status
     $: isTabLoading = activeTab === 'overview' ? ($clientsQuery.isFetching || $logsQuery.isFetching) :
@@ -254,6 +256,9 @@
                 {:else if activeTab === 'clients'}
                     <h2 class="text-2xl font-bold text-primary tracking-tight">Daftar Klien Toko</h2>
                     <p class="text-xs text-gray-500 mt-1 font-medium">Kelola identitas pemilik dan toko yang terintegrasi dengan lisensi keygen.</p>
+                {:else if activeTab === 'settings'}
+                    <h2 class="text-2xl font-bold text-primary tracking-tight">Pengaturan Akun</h2>
+                    <p class="text-xs text-gray-500 mt-1 font-medium">Atur nama pengguna dan kata sandi untuk pengamanan dashboard.</p>
                 {:else}
                     <h2 class="text-2xl font-bold text-primary tracking-tight">Log Aktivasi & Audit Keamanan</h2>
                     <p class="text-xs text-gray-500 mt-1 font-medium">Pantau lalu lintas aktivasi sistem untuk mendeteksi cloning mesin atau pemalsuan HWID.</p>
@@ -334,7 +339,7 @@
             {/if}
 
             <!-- Data Tables (For tabs: licenses, clients, logs) -->
-            {#if activeTab !== 'overview'}
+            {#if activeTab !== 'overview' && activeTab !== 'settings'}
                 <div class="bg-white border border-base-300 rounded-lg shadow-sm overflow-hidden min-h-[400px]">
                     <div class="px-6 py-4 border-b border-base-300 bg-base-100/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div class="relative grow max-w-sm">
@@ -346,7 +351,7 @@
                                     placeholder="Cari data di tabel ini..."
                                     bind:value={searchQuery}
                                     class="input input-sm input-bordered pl-9 bg-white border-base-300 text-gray-800 w-full rounded-md focus:outline-none focus:border-primary text-xs"
-                            />
+                             />
                         </div>
 
                         <div class="flex items-center gap-3 self-end sm:self-auto">
@@ -405,6 +410,10 @@
                         {/if}
                     {/if}
                 </div>
+            {/if}
+
+            {#if activeTab === 'settings'}
+                <Settings />
             {/if}
         </div>
     </main>

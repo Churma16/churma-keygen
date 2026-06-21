@@ -1,5 +1,5 @@
 <script>
-    import { Grid, KeyRound, Users, Activity, Shield, LogOut } from 'lucide-svelte';
+    import { Grid, KeyRound, Users, Activity, Shield, LogOut, Settings } from 'lucide-svelte';
     import { authStore } from '../../../domains/auth/store/authStore';
 
     export let activeTab = 'overview';
@@ -93,6 +93,23 @@
                         >
                             <Activity size={16}/>
                             <span>Log Aktivasi</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Menu Group: SISTEM -->
+            <div>
+                <div class="px-3 mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sistem</div>
+                <ul class="space-y-1">
+                    <li>
+                        <button
+                                on:click={() => handleTabChange('settings')}
+                                class="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-semibold transition duration-150
+              {activeTab === 'settings' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-base-100 hover:text-primary'}"
+                        >
+                            <Settings size={16}/>
+                            <span>Pengaturan Akun</span>
                         </button>
                     </li>
                 </ul>

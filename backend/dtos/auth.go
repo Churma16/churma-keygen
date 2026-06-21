@@ -16,3 +16,9 @@ type UserResponse struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
 }
+
+type UpdateProfileRequest struct {
+	Username        string `json:"username" binding:"required"`
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password"`
+}
