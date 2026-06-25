@@ -16,6 +16,7 @@ func SetupRouter(
 	clientCtrl *controllers.ClientController,
 	licenseCtrl *controllers.LicenseController,
 	activationCtrl *controllers.ActivationController,
+	settingCtrl *controllers.SettingController,
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	if os.Getenv("ENV") != "prod" {
@@ -43,6 +44,9 @@ func SetupRouter(
 
 		// Public Endpoint to retrieve the RSA Public Key
 		api.GET("/public-key", activationCtrl.GetPublicKey)
+
+		// Public Endpoint to retrieve the support/contact details (WhatsApp)
+		api.GET("/contact", activationCtrl.GetContact)
 	}
 
 	// Protected Admin Dashboard Routes
@@ -70,6 +74,10 @@ func SetupRouter(
 
 		// Audit Activation Logs
 		adminGroup.GET("/logs", licenseCtrl.GetActivationLogs)
+
+		// System Settings Management
+		adminGroup.GET("/settings/:key", settingCtrl.GetSetting)
+		adminGroup.PUT("/settings/:key", settingCtrl.UpdateSetting)
 	}
 
 	// Serve Svelte frontend SPA built assets statically if the dist/ directory is present
