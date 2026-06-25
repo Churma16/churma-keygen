@@ -1,6 +1,6 @@
 <script>
     import { createEventDispatcher } from 'svelte';
-    import { User, Lock, Save, AlertCircle, ShieldCheck, Phone } from 'lucide-svelte';
+    import { User, Lock, Save, AlertCircle, ShieldCheck, Phone, Mail } from 'lucide-svelte';
     import { authStore } from '../../auth/store/authStore';
     import { useUpdateProfileMutation } from '../../auth/store/authQueries';
     import { useGetSetting, useUpdateSettingMutation } from '../store/settingQueries';
@@ -22,41 +22,52 @@
         errorMsg = '';
     }
 
-    // WhatsApp settings logic
-    const getSettingQuery = useGetSetting('contact_whatsapp');
+    // Support Contact settings logic
+    const getWhatsappQuery = useGetSetting('contact_whatsapp');
+    const getEmailQuery = useGetSetting('contact_email');
     const updateSettingMutation = useUpdateSettingMutation();
 
     let whatsappPhone = '';
+    let emailContact = '';
     let hasLoadedWhatsapp = false;
-    let settingErrorMsg = '';
-    let settingSuccessMsg = '';
+    let hasLoadedEmail = false;
 
-    $: if (getSettingQuery.data && !hasLoadedWhatsapp) {
-        whatsappPhone = getSettingQuery.data.value || '';
+    let contactErrorMsg = '';
+    let contactSuccessMsg = '';
+
+    $: if (getWhatsappQuery.data && !hasLoadedWhatsapp) {
+        whatsappPhone = getWhatsappQuery.data.value || '';
         hasLoadedWhatsapp = true;
     }
 
-    $: if (whatsappPhone) {
-        settingErrorMsg = '';
+    $: if (getEmailQuery.data && !hasLoadedEmail) {
+        emailContact = getEmailQuery.data.value || '';
+        hasLoadedEmail = true;
     }
 
-    async function handleUpdateWhatsApp() {
-        if (!whatsappPhone) {
-            settingErrorMsg = 'Nomor WhatsApp wajib diisi.';
-            return;
-        }
+    $: if (whatsappPhone || emailContact) {
+        contactErrorMsg = '';
+    }
 
-        settingErrorMsg = '';
-        settingSuccessMsg = '';
+    async function handleUpdateContact() {
+        contactErrorMsg = '';
+        contactSuccessMsg = '';
 
         try {
-            await updateSettingMutation.mutateAsync({
-                key: 'contact_whatsapp',
-                value: whatsappPhone
-            });
-            settingSuccessMsg = 'Nomor WhatsApp berhasil diperbarui!';
+            // Save both settings in parallel
+            await Promise.all([
+                updateSettingMutation.mutateAsync({
+                    key: 'contact_whatsapp',
+                    value: whatsappPhone
+                }),
+                updateSettingMutation.mutateAsync({
+                    key: 'contact_email',
+                    value: emailContact
+                })
+            ]);
+            contactSuccessMsg = 'Kontak dukungan berhasil diperbarui!';
         } catch (err) {
-            settingErrorMsg = err.response?.data?.message || err.message || 'Gagal memperbarui nomor WhatsApp.';
+            contactErrorMsg = err.response?.data?.message || err.message || 'Gagal memperbarui kontak dukungan.';
         }
     }
 
@@ -241,51 +252,79 @@
             <Phone size={18}/>
         </div>
         <div>
-            <h3 class="font-bold text-base text-primary">Kontak Dukungan (WhatsApp)</h3>
-            <p class="text-xs text-gray-400 font-medium">Ubah nomor WhatsApp yang akan ditampilkan pada aplikasi klien.</p>
+            <h3 class="font-bold text-base text-primary">Kontak Dukungan (WhatsApp & Email)</h3>
+            <p class="text-xs text-gray-400 font-medium">Ubah nomor WhatsApp dan email dukungan yang akan ditampilkan pada aplikasi klien.</p>
         </div>
     </div>
 
     <!-- Form Body -->
     <div class="p-6 space-y-5">
-        {#if getSettingQuery.isPending}
+        {#if getWhatsappQuery.isPending || getEmailQuery.isPending}
             <div class="flex justify-center py-4">
                 <span class="loading loading-spinner loading-md text-primary"></span>
             </div>
         {:else}
-            {#if settingErrorMsg}
+            {#if contactErrorMsg}
                 <div class="alert alert-error rounded-md flex items-start gap-2.5 text-xs text-red-800 bg-red-50 border border-red-200 p-3.5">
                     <AlertCircle size={16} class="shrink-0 mt-0.5" />
-                    <span>{settingErrorMsg}</span>
+                    <span>{contactErrorMsg}</span>
                 </div>
             {/if}
 
-            {#if settingSuccessMsg}
+            {#if contactSuccessMsg}
                 <div class="alert alert-success rounded-md flex items-start gap-2.5 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 p-3.5">
                     <ShieldCheck size={16} class="shrink-0 mt-0.5" />
-                    <span>{settingSuccessMsg}</span>
+                    <span>{contactSuccessMsg}</span>
                 </div>
             {/if}
 
-            <div class="form-control">
-                <label class="label px-0.5 py-1" for="settings-whatsapp">
-                    <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wider">Nomor WhatsApp</span>
-                </label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                        <Phone size={16}/>
-                    </span>
-                    <input
-                            id="settings-whatsapp"
-                            type="text"
-                            placeholder="Contoh: 6281234567890"
-                            bind:value={whatsappPhone}
-                            class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
-                            disabled={updateSettingMutation.isPending}
-                    />
+            <div class="grid grid-cols-1 gap-4">
+                <!-- WhatsApp Input -->
+                <div class="form-control">
+                    <label class="label px-0.5 py-1" for="settings-whatsapp">
+                        <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wider">Nomor WhatsApp</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <Phone size={16}/>
+                        </span>
+                        <input
+                                id="settings-whatsapp"
+                                type="text"
+                                placeholder="Contoh: 6281234567890"
+                                bind:value={whatsappPhone}
+                                class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
+                                disabled={updateSettingMutation.isPending}
+                        />
+                    </div>
+                    <div class="px-0.5 py-1">
+                        <span class="text-[10px] text-gray-400 font-medium">Gunakan kode negara tanpa tanda "+" (misal: 62812xxxx). Nomor ini akan muncul di aplikasi klien saat tombol hubungi diklik.</span>
+                    </div>
                 </div>
-                <div class="px-0.5 py-1">
-                    <span class="text-[10px] text-gray-400 font-medium">Gunakan kode negara tanpa tanda "+" (misal: 62812xxxx). Nomor ini akan muncul di aplikasi klien saat tombol hubungi diklik.</span>
+
+                <div class="border-t border-base-300 my-2"></div>
+
+                <!-- Email Input -->
+                <div class="form-control">
+                    <label class="label px-0.5 py-1" for="settings-email">
+                        <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wider">Email Dukungan</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <Mail size={16}/>
+                        </span>
+                        <input
+                                id="settings-email"
+                                type="email"
+                                placeholder="Contoh: support@churma.com"
+                                bind:value={emailContact}
+                                class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
+                                disabled={updateSettingMutation.isPending}
+                        />
+                    </div>
+                    <div class="px-0.5 py-1">
+                        <span class="text-[10px] text-gray-400 font-medium">Email dukungan yang dapat dihubungi oleh klien jika terjadi masalah aktivasi.</span>
+                    </div>
                 </div>
             </div>
         {/if}
@@ -294,8 +333,8 @@
     <!-- Footer Card with Actions -->
     <div class="px-6 py-4 border-t border-base-300 bg-base-100/10 flex justify-end gap-3">
         <button
-                on:click={handleUpdateWhatsApp}
-                disabled={getSettingQuery.isPending || updateSettingMutation.isPending || !whatsappPhone}
+                on:click={handleUpdateContact}
+                disabled={getWhatsappQuery.isPending || getEmailQuery.isPending || updateSettingMutation.isPending}
                 class="btn btn-primary btn-sm text-white rounded-md text-xs font-bold h-9 px-5 flex items-center gap-2"
         >
             {#if updateSettingMutation.isPending}

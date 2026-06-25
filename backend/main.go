@@ -80,12 +80,26 @@ func main() {
 		fmt.Println("Seeding default WhatsApp contact...")
 		defaultSetting := models.Setting{
 			Key:   "contact_whatsapp",
-			Value: "6281234567890",
+			Value: "",
 		}
 		if err := db.Create(&defaultSetting).Error; err != nil {
 			log.Fatalf("Failed to seed default WhatsApp contact: %v", err)
 		}
 		fmt.Println("Default WhatsApp contact seeded.")
+	}
+
+	var emailSettingCount int64
+	db.Model(&models.Setting{}).Where("key = ?", "contact_email").Count(&emailSettingCount)
+	if emailSettingCount == 0 {
+		fmt.Println("Seeding default Email contact...")
+		defaultEmailSetting := models.Setting{
+			Key:   "contact_email",
+			Value: "",
+		}
+		if err := db.Create(&defaultEmailSetting).Error; err != nil {
+			log.Fatalf("Failed to seed default Email contact: %v", err)
+		}
+		fmt.Println("Default Email contact seeded.")
 	}
 
 	// 5. Initialize RSA Keypair

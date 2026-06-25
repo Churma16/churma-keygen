@@ -90,6 +90,14 @@ func setupTestEnvironment(t *testing.T) *gin.Engine {
 		t.Fatalf("Failed to seed test setting: %v", err)
 	}
 
+	testEmailSetting := models.Setting{
+		Key:   "contact_email",
+		Value: "support@churma.com",
+	}
+	if err := db.Create(&testEmailSetting).Error; err != nil {
+		t.Fatalf("Failed to seed test email setting: %v", err)
+	}
+
 	// 4. Instantiate Layers for Testing
 	licenseRepo := repositories.NewLicenseRepository(db)
 	activationLogRepo := repositories.NewActivationLogRepository(db)
@@ -360,12 +368,15 @@ func TestGetContact_Success(t *testing.T) {
 		t.Fatalf("Expected data object in response")
 	}
 
-	// In setupTestEnvironment, we seeded contact_whatsapp = "0812-3456-7890"
+	// In setupTestEnvironment, we seeded contact_whatsapp = "0812-3456-7890" and contact_email = "support@churma.com"
 	// After sanitization, phone is still "0812-3456-7890", but URL is https://wa.me/6281234567890
 	if data["phone"] != "0812-3456-7890" {
 		t.Errorf("Expected phone to be 0812-3456-7890, got %v", data["phone"])
 	}
 	if data["whatsapp_url"] != "https://wa.me/6281234567890" {
 		t.Errorf("Expected whatsapp_url to be https://wa.me/6281234567890, got %v", data["whatsapp_url"])
+	}
+	if data["email"] != "support@churma.com" {
+		t.Errorf("Expected email to be support@churma.com, got %v", data["email"])
 	}
 }

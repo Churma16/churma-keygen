@@ -117,16 +117,24 @@ func (s *activationServiceImpl) GetContact() *dtos.ContactResponse {
 	setting, err := s.settingRepo.Get("contact_whatsapp")
 	if err == nil && setting != nil {
 		phone = setting.Value
-	} else {
-		phone = "6281234567890" // default placeholder
 	}
 
-	sanitized := sanitizeWhatsAppNumber(phone)
-	waURL := "https://wa.me/" + sanitized
+	var email string
+	emailSetting, err := s.settingRepo.Get("contact_email")
+	if err == nil && emailSetting != nil {
+		email = emailSetting.Value
+	}
+
+	var waURL string
+	if phone != "" {
+		sanitized := sanitizeWhatsAppNumber(phone)
+		waURL = "https://wa.me/" + sanitized
+	}
 
 	return &dtos.ContactResponse{
 		Phone:       phone,
 		WhatsAppURL: waURL,
+		Email:       email,
 	}
 }
 
