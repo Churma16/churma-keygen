@@ -15,20 +15,24 @@ import (
 type ActivationService interface {
 	Activate(req dtos.ActivateRequest, ipAddress string) (*dtos.ActivateResponse, error)
 	GetPublicKey() (string, error)
+	GetContact() *dtos.ContactResponse
 }
 
 type activationServiceImpl struct {
 	licenseRepo       repositories.LicenseRepository
 	activationLogRepo repositories.ActivationLogRepository
+	settingRepo       repositories.SettingRepository
 }
 
 func NewActivationService(
 	licenseRepo repositories.LicenseRepository,
 	activationLogRepo repositories.ActivationLogRepository,
+	settingRepo repositories.SettingRepository,
 ) ActivationService {
 	return &activationServiceImpl{
 		licenseRepo:       licenseRepo,
 		activationLogRepo: activationLogRepo,
+		settingRepo:       settingRepo,
 	}
 }
 
@@ -106,6 +110,38 @@ func (s *activationServiceImpl) GetPublicKey() (string, error) {
 		return "", errors.New("RSA Public Key is not configured")
 	}
 	return pubPEM, nil
+}
+
+func (s *activationServiceImpl) GetContact() *dtos.ContactResponse {
+	var phone string
+	setting, err := s.settingRepo.Get("contact_whatsapp")
+	if err == nil && setting != nil {
+		phone = setting.Value
+	} else {
+		phone = "6281234567890" // default placeholder
+	}
+
+	sanitized := sanitizeWhatsAppNumber(phone)
+	waURL := "https://wa.me/" + sanitized
+
+	return &dtos.ContactResponse{
+		Phone:       phone,
+		WhatsAppURL: waURL,
+	}
+}
+
+func sanitizeWhatsAppNumber(phone string) string {
+	var digits []rune
+	for _, r := range phone {
+		if r >= '0' && r <= '9' {
+			digits = append(digits, r)
+		}
+	}
+	s := string(digits)
+	if len(s) > 0 && s[0] == '0' {
+		s = "62" + s[1:]
+	}
+	return s
 }
 
 func (s *activationServiceImpl) logAttempt(licenseID *uuid.UUID, attemptedCode, hardwareID, ipAddress, status string) {

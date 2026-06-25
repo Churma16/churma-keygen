@@ -54,3 +54,8 @@ func (ctrl *ActivationController) GetPublicKey(c *gin.Context) {
 
 	c.String(http.StatusOK, pubPEM)
 }
+
+func (ctrl *ActivationController) GetContact(c *gin.Context) {
+	resp := ctrl.activationService.GetContact()
+	c.JSON(http.StatusOK, dtos.NewSuccessResponse(http.StatusOK, "Contact info retrieved successfully", resp))
+}

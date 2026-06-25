@@ -41,6 +41,7 @@ func setupTestEnvironment(t *testing.T) *gin.Engine {
 		&models.Client{},
 		&models.License{},
 		&models.ActivationLog{},
+		&models.Setting{},
 	)
 	if err != nil {
 		t.Fatalf("Failed to migrate test models: %v", err)
@@ -81,16 +82,26 @@ func setupTestEnvironment(t *testing.T) *gin.Engine {
 		t.Fatalf("Failed to seed license: %v", err)
 	}
 
+	testSetting := models.Setting{
+		Key:   "contact_whatsapp",
+		Value: "0812-3456-7890",
+	}
+	if err := db.Create(&testSetting).Error; err != nil {
+		t.Fatalf("Failed to seed test setting: %v", err)
+	}
+
 	// 4. Instantiate Layers for Testing
 	licenseRepo := repositories.NewLicenseRepository(db)
 	activationLogRepo := repositories.NewActivationLogRepository(db)
-	activationService := services.NewActivationService(licenseRepo, activationLogRepo)
+	settingRepo := repositories.NewSettingRepository(db)
+	activationService := services.NewActivationService(licenseRepo, activationLogRepo, settingRepo)
 	activationCtrl := NewActivationController(activationService)
 
 	// 5. Setup router
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.POST("/api/v1/client/activate", activationCtrl.ActivateLicense)
+	r.GET("/api/v1/contact", activationCtrl.GetContact)
 	return r
 }
 
@@ -317,5 +328,44 @@ func TestActivateLicense_Error_Expired(t *testing.T) {
 	config.DB.Order("created_at desc").First(&logAttempt)
 	if logAttempt.Status != "SUSPENDED_KEY" {
 		t.Errorf("Expected log status SUSPENDED_KEY, got %s", logAttempt.Status)
+	}
+}
+
+func TestGetContact_Success(t *testing.T) {
+	r := setupTestEnvironment(t)
+	defer teardownTestEnvironment()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/contact", nil)
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
+	}
+
+	var envelope map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &envelope)
+
+	meta, ok := envelope["meta"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected meta object in response")
+	}
+	if meta["status"] != "success" {
+		t.Errorf("Expected meta status to be success, got %v", meta["status"])
+	}
+
+	data, ok := envelope["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected data object in response")
+	}
+
+	// In setupTestEnvironment, we seeded contact_whatsapp = "0812-3456-7890"
+	// After sanitization, phone is still "0812-3456-7890", but URL is https://wa.me/6281234567890
+	if data["phone"] != "0812-3456-7890" {
+		t.Errorf("Expected phone to be 0812-3456-7890, got %v", data["phone"])
+	}
+	if data["whatsapp_url"] != "https://wa.me/6281234567890" {
+		t.Errorf("Expected whatsapp_url to be https://wa.me/6281234567890, got %v", data["whatsapp_url"])
 	}
 }

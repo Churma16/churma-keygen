@@ -37,6 +37,7 @@ func main() {
 		&models.Client{},
 		&models.License{},
 		&models.ActivationLog{},
+		&models.Setting{},
 	)
 	if err != nil {
 		log.Fatalf("Migration failed: %v", err)
@@ -48,6 +49,7 @@ func main() {
 	clientRepo := repositories.NewClientRepository(db)
 	licenseRepo := repositories.NewLicenseRepository(db)
 	activationLogRepo := repositories.NewActivationLogRepository(db)
+	settingRepo := repositories.NewSettingRepository(db)
 
 	// 4. Seed Default Admin User if empty
 	var adminCount int64
@@ -71,6 +73,21 @@ func main() {
 		fmt.Println("Default administrator created (username: admin, password: admin123).")
 	}
 
+	// Seed Default Setting if empty
+	var settingCount int64
+	db.Model(&models.Setting{}).Where("key = ?", "contact_whatsapp").Count(&settingCount)
+	if settingCount == 0 {
+		fmt.Println("Seeding default WhatsApp contact...")
+		defaultSetting := models.Setting{
+			Key:   "contact_whatsapp",
+			Value: "6281234567890",
+		}
+		if err := db.Create(&defaultSetting).Error; err != nil {
+			log.Fatalf("Failed to seed default WhatsApp contact: %v", err)
+		}
+		fmt.Println("Default WhatsApp contact seeded.")
+	}
+
 	// 5. Initialize RSA Keypair
 	err = crypto.InitRSAKeys()
 	if err != nil {
@@ -81,16 +98,18 @@ func main() {
 	authService := services.NewAuthService(userRepo)
 	clientService := services.NewClientService(clientRepo, licenseRepo)
 	licenseService := services.NewLicenseService(licenseRepo, clientRepo, activationLogRepo)
-	activationService := services.NewActivationService(licenseRepo, activationLogRepo)
+	activationService := services.NewActivationService(licenseRepo, activationLogRepo, settingRepo)
+	settingService := services.NewSettingService(settingRepo)
 
 	// 7. Instantiate Controllers
 	authCtrl := controllers.NewAuthController(authService)
 	clientCtrl := controllers.NewClientController(clientService)
 	licenseCtrl := controllers.NewLicenseController(licenseService)
 	activationCtrl := controllers.NewActivationController(activationService)
+	settingCtrl := controllers.NewSettingController(settingService)
 
 	// 8. Setup Router
-	r := SetupRouter(authCtrl, clientCtrl, licenseCtrl, activationCtrl)
+	r := SetupRouter(authCtrl, clientCtrl, licenseCtrl, activationCtrl, settingCtrl)
 
 	// 9. Start server
 	host := os.Getenv("HOST")

@@ -1,8 +1,9 @@
 <script>
     import { createEventDispatcher } from 'svelte';
-    import { User, Lock, Save, AlertCircle, ShieldCheck } from 'lucide-svelte';
+    import { User, Lock, Save, AlertCircle, ShieldCheck, Phone } from 'lucide-svelte';
     import { authStore } from '../../auth/store/authStore';
     import { useUpdateProfileMutation } from '../../auth/store/authQueries';
+    import { useGetSetting, useUpdateSettingMutation } from '../store/settingQueries';
 
     const dispatch = createEventDispatcher();
 
@@ -19,6 +20,44 @@
     // Reset messages when input changes
     $: if (username || currentPassword || newPassword || confirmPassword) {
         errorMsg = '';
+    }
+
+    // WhatsApp settings logic
+    const getSettingQuery = useGetSetting('contact_whatsapp');
+    const updateSettingMutation = useUpdateSettingMutation();
+
+    let whatsappPhone = '';
+    let hasLoadedWhatsapp = false;
+    let settingErrorMsg = '';
+    let settingSuccessMsg = '';
+
+    $: if (getSettingQuery.data && !hasLoadedWhatsapp) {
+        whatsappPhone = getSettingQuery.data.value || '';
+        hasLoadedWhatsapp = true;
+    }
+
+    $: if (whatsappPhone) {
+        settingErrorMsg = '';
+    }
+
+    async function handleUpdateWhatsApp() {
+        if (!whatsappPhone) {
+            settingErrorMsg = 'Nomor WhatsApp wajib diisi.';
+            return;
+        }
+
+        settingErrorMsg = '';
+        settingSuccessMsg = '';
+
+        try {
+            await updateSettingMutation.mutateAsync({
+                key: 'contact_whatsapp',
+                value: whatsappPhone
+            });
+            settingSuccessMsg = 'Nomor WhatsApp berhasil diperbarui!';
+        } catch (err) {
+            settingErrorMsg = err.response?.data?.message || err.message || 'Gagal memperbarui nomor WhatsApp.';
+        }
     }
 
     async function handleUpdateProfile() {
@@ -191,6 +230,80 @@
                 <Save size={14}/>
             {/if}
             Simpan Perubahan
+        </button>
+    </div>
+</div>
+
+<div class="bg-white border border-base-300 rounded-lg shadow-sm max-w-2xl w-full mx-auto overflow-hidden mt-6">
+    <!-- Header Card -->
+    <div class="px-6 py-5 border-b border-base-300 bg-base-100/30 flex items-center gap-3">
+        <div class="p-2.5 bg-primary/10 text-primary rounded-md border border-primary/20">
+            <Phone size={18}/>
+        </div>
+        <div>
+            <h3 class="font-bold text-base text-primary">Kontak Dukungan (WhatsApp)</h3>
+            <p class="text-xs text-gray-400 font-medium">Ubah nomor WhatsApp yang akan ditampilkan pada aplikasi klien.</p>
+        </div>
+    </div>
+
+    <!-- Form Body -->
+    <div class="p-6 space-y-5">
+        {#if getSettingQuery.isPending}
+            <div class="flex justify-center py-4">
+                <span class="loading loading-spinner loading-md text-primary"></span>
+            </div>
+        {:else}
+            {#if settingErrorMsg}
+                <div class="alert alert-error rounded-md flex items-start gap-2.5 text-xs text-red-800 bg-red-50 border border-red-200 p-3.5">
+                    <AlertCircle size={16} class="shrink-0 mt-0.5" />
+                    <span>{settingErrorMsg}</span>
+                </div>
+            {/if}
+
+            {#if settingSuccessMsg}
+                <div class="alert alert-success rounded-md flex items-start gap-2.5 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 p-3.5">
+                    <ShieldCheck size={16} class="shrink-0 mt-0.5" />
+                    <span>{settingSuccessMsg}</span>
+                </div>
+            {/if}
+
+            <div class="form-control">
+                <label class="label px-0.5 py-1" for="settings-whatsapp">
+                    <span class="label-text text-xs font-bold text-gray-500 uppercase tracking-wider">Nomor WhatsApp</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                        <Phone size={16}/>
+                    </span>
+                    <input
+                            id="settings-whatsapp"
+                            type="text"
+                            placeholder="Contoh: 6281234567890"
+                            bind:value={whatsappPhone}
+                            class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
+                            disabled={updateSettingMutation.isPending}
+                    />
+                </div>
+                <div class="px-0.5 py-1">
+                    <span class="text-[10px] text-gray-400 font-medium">Gunakan kode negara tanpa tanda "+" (misal: 62812xxxx). Nomor ini akan muncul di aplikasi klien saat tombol hubungi diklik.</span>
+                </div>
+            </div>
+        {/if}
+    </div>
+
+    <!-- Footer Card with Actions -->
+    <div class="px-6 py-4 border-t border-base-300 bg-base-100/10 flex justify-end gap-3">
+        <button
+                on:click={handleUpdateWhatsApp}
+                disabled={getSettingQuery.isPending || updateSettingMutation.isPending || !whatsappPhone}
+                class="btn btn-primary btn-sm text-white rounded-md text-xs font-bold h-9 px-5 flex items-center gap-2"
+        >
+            {#if updateSettingMutation.isPending}
+                <span class="loading loading-spinner loading-xs"></span>
+            {:else}
+                <Save size={14}/>
+            {/if}
+            Simpan Kontak
         </button>
     </div>
 </div>
