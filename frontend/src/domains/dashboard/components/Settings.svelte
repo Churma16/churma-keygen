@@ -7,20 +7,22 @@
 
     const dispatch = createEventDispatcher();
 
-    let username = $authStore.username || '';
-    let currentPassword = '';
-    let newPassword = '';
-    let confirmPassword = '';
+    let username = $state($authStore.username || '');
+    let currentPassword = $state('');
+    let newPassword = $state('');
+    let confirmPassword = $state('');
 
-    let errorMsg = '';
-    let successMsg = '';
+    let errorMsg = $state('');
+    let successMsg = $state('');
 
     const updateProfileMutation = useUpdateProfileMutation();
 
     // Reset messages when input changes
-    $: if (username || currentPassword || newPassword || confirmPassword) {
-        errorMsg = '';
-    }
+    $effect(() => {
+        if (username || currentPassword || newPassword || confirmPassword) {
+            errorMsg = '';
+        }
+    });
 
     // Support Contact settings logic
     const getWhatsappQuery = useGetSetting('contact_whatsapp');
@@ -28,30 +30,36 @@
     const updateWhatsappMutation = useUpdateSettingMutation();
     const updateEmailMutation = useUpdateSettingMutation();
 
-    let whatsappPhone = '';
-    let emailContact = '';
-    let hasLoadedWhatsapp = false;
-    let hasLoadedEmail = false;
+    let whatsappPhone = $state('');
+    let emailContact = $state('');
+    let hasLoadedWhatsapp = $state(false);
+    let hasLoadedEmail = $state(false);
 
-    let contactErrorMsg = '';
-    let contactSuccessMsg = '';
+    let contactErrorMsg = $state('');
+    let contactSuccessMsg = $state('');
 
-    $: if (getWhatsappQuery.data && !hasLoadedWhatsapp) {
-        whatsappPhone = getWhatsappQuery.data.value || '';
-        hasLoadedWhatsapp = true;
-    }
+    $effect(() => {
+        if (getWhatsappQuery.data && !hasLoadedWhatsapp) {
+            whatsappPhone = getWhatsappQuery.data.value || '';
+            hasLoadedWhatsapp = true;
+        }
+    });
 
-    $: if (getEmailQuery.data && !hasLoadedEmail) {
-        emailContact = getEmailQuery.data.value || '';
-        hasLoadedEmail = true;
-    }
+    $effect(() => {
+        if (getEmailQuery.data && !hasLoadedEmail) {
+            emailContact = getEmailQuery.data.value || '';
+            hasLoadedEmail = true;
+        }
+    });
 
-    $: if (whatsappPhone || emailContact) {
-        contactErrorMsg = '';
-    }
+    $effect(() => {
+        if (whatsappPhone || emailContact) {
+            contactErrorMsg = '';
+        }
+    });
 
-    $: isContactSaving = updateWhatsappMutation.isPending || updateEmailMutation.isPending;
-    $: isContactLoading = getWhatsappQuery.isPending || getEmailQuery.isPending;
+    const isContactSaving = $derived(updateWhatsappMutation.isPending || updateEmailMutation.isPending);
+    const isContactLoading = $derived(getWhatsappQuery.isPending || getEmailQuery.isPending);
 
     async function handleUpdateContact() {
         contactErrorMsg = '';
@@ -74,7 +82,6 @@
             contactErrorMsg = err.response?.data?.message || err.message || 'Gagal memperbarui kontak dukungan.';
         }
     }
-
 
     async function handleUpdateProfile() {
         if (!username) {
