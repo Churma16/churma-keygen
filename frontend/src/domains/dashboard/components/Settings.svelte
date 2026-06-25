@@ -25,7 +25,8 @@
     // Support Contact settings logic
     const getWhatsappQuery = useGetSetting('contact_whatsapp');
     const getEmailQuery = useGetSetting('contact_email');
-    const updateSettingMutation = useUpdateSettingMutation();
+    const updateWhatsappMutation = useUpdateSettingMutation();
+    const updateEmailMutation = useUpdateSettingMutation();
 
     let whatsappPhone = '';
     let emailContact = '';
@@ -49,18 +50,21 @@
         contactErrorMsg = '';
     }
 
+    $: isContactSaving = updateWhatsappMutation.isPending || updateEmailMutation.isPending;
+    $: isContactLoading = getWhatsappQuery.isPending || getEmailQuery.isPending;
+
     async function handleUpdateContact() {
         contactErrorMsg = '';
         contactSuccessMsg = '';
 
         try {
-            // Save both settings in parallel
+            // Use two separate mutation instances to avoid stuck isPending state
             await Promise.all([
-                updateSettingMutation.mutateAsync({
+                updateWhatsappMutation.mutateAsync({
                     key: 'contact_whatsapp',
                     value: whatsappPhone
                 }),
-                updateSettingMutation.mutateAsync({
+                updateEmailMutation.mutateAsync({
                     key: 'contact_email',
                     value: emailContact
                 })
@@ -70,6 +74,7 @@
             contactErrorMsg = err.response?.data?.message || err.message || 'Gagal memperbarui kontak dukungan.';
         }
     }
+
 
     async function handleUpdateProfile() {
         if (!username) {
@@ -259,10 +264,11 @@
 
     <!-- Form Body -->
     <div class="p-6 space-y-5">
-        {#if getWhatsappQuery.isPending || getEmailQuery.isPending}
+        {#if isContactLoading}
             <div class="flex justify-center py-4">
                 <span class="loading loading-spinner loading-md text-primary"></span>
             </div>
+
         {:else}
             {#if contactErrorMsg}
                 <div class="alert alert-error rounded-md flex items-start gap-2.5 text-xs text-red-800 bg-red-50 border border-red-200 p-3.5">
@@ -294,7 +300,7 @@
                                 placeholder="Contoh: 6281234567890"
                                 bind:value={whatsappPhone}
                                 class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
-                                disabled={updateSettingMutation.isPending}
+                                disabled={isContactSaving}
                         />
                     </div>
                     <div class="px-0.5 py-1">
@@ -319,7 +325,7 @@
                                 placeholder="Contoh: support@churma.com"
                                 bind:value={emailContact}
                                 class="input input-bordered w-full pl-10 bg-gray-50 border-gray-300 text-gray-800 rounded-md focus:bg-white focus:outline-none focus:border-primary text-sm"
-                                disabled={updateSettingMutation.isPending}
+                                disabled={isContactSaving}
                         />
                     </div>
                     <div class="px-0.5 py-1">
@@ -334,10 +340,10 @@
     <div class="px-6 py-4 border-t border-base-300 bg-base-100/10 flex justify-end gap-3">
         <button
                 on:click={handleUpdateContact}
-                disabled={getWhatsappQuery.isPending || getEmailQuery.isPending || updateSettingMutation.isPending}
+                disabled={isContactLoading || isContactSaving}
                 class="btn btn-primary btn-sm text-white rounded-md text-xs font-bold h-9 px-5 flex items-center gap-2"
         >
-            {#if updateSettingMutation.isPending}
+            {#if isContactSaving}
                 <span class="loading loading-spinner loading-xs"></span>
             {:else}
                 <Save size={14}/>
