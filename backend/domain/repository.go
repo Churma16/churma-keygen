@@ -22,3 +22,9 @@ type LicenseRepository interface {
 	Delete(id uuid.UUID) error
 	CountByStatus(status string) (int64, error)
 }
+
+type ActivationLogRepository interface {
+	FindAll(limit int) ([]ActivationLog, error)
+	Create(log *ActivationLog) error
+}
+

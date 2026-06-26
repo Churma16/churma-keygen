@@ -14,7 +14,7 @@ import (
 	"churma-keygen/backend/dtos"
 	"churma-keygen/backend/models"
 	"churma-keygen/backend/repositories"
-	"churma-keygen/backend/services"
+	"churma-keygen/backend/usecase"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -102,8 +102,8 @@ func setupTestEnvironment(t *testing.T) *gin.Engine {
 	licenseRepo := repositories.NewLicenseRepository(db)
 	activationLogRepo := repositories.NewActivationLogRepository(db)
 	settingRepo := repositories.NewSettingRepository(db)
-	activationService := services.NewActivationService(licenseRepo, activationLogRepo, settingRepo)
-	activationCtrl := NewActivationController(activationService)
+	activationUsecase := usecase.NewActivationUsecase(licenseRepo, activationLogRepo, settingRepo)
+	activationCtrl := NewActivationController(activationUsecase)
 
 	// 5. Setup router
 	gin.SetMode(gin.TestMode)
