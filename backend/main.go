@@ -8,9 +8,9 @@ import (
 	"churma-keygen/backend/config"
 	"churma-keygen/backend/controllers"
 	"churma-keygen/backend/crypto"
-	"churma-keygen/backend/models"
+	"churma-keygen/backend/domain"
 	"churma-keygen/backend/repositories"
-	"churma-keygen/backend/services"
+	"churma-keygen/backend/usecase"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -33,11 +33,11 @@ func main() {
 	// 2. Run GORM Auto Migrations
 	fmt.Println("Running database migrations...")
 	err := db.AutoMigrate(
-		&models.User{},
-		&models.Client{},
-		&models.License{},
-		&models.ActivationLog{},
-		&models.Setting{},
+		&domain.User{},
+		&domain.Client{},
+		&domain.License{},
+		&domain.ActivationLog{},
+		&domain.Setting{},
 	)
 	if err != nil {
 		log.Fatalf("Migration failed: %v", err)
@@ -53,7 +53,7 @@ func main() {
 
 	// 4. Seed Default Admin User if empty
 	var adminCount int64
-	db.Model(&models.User{}).Where("username = ?", "admin").Count(&adminCount)
+	db.Model(&domain.User{}).Where("username = ?", "admin").Count(&adminCount)
 	if adminCount == 0 {
 		fmt.Println("Seeding default administrator...")
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
@@ -61,7 +61,7 @@ func main() {
 			log.Fatalf("Failed to hash default admin password: %v", err)
 		}
 
-		admin := models.User{
+		admin := domain.User{
 			ID:           uuid.New(),
 			Username:     "admin",
 			PasswordHash: string(hashedPassword),
@@ -75,10 +75,10 @@ func main() {
 
 	// Seed Default Setting if empty
 	var settingCount int64
-	db.Model(&models.Setting{}).Where("key = ?", "contact_whatsapp").Count(&settingCount)
+	db.Model(&domain.Setting{}).Where("key = ?", "contact_whatsapp").Count(&settingCount)
 	if settingCount == 0 {
 		fmt.Println("Seeding default WhatsApp contact...")
-		defaultSetting := models.Setting{
+		defaultSetting := domain.Setting{
 			Key:   "contact_whatsapp",
 			Value: "",
 		}
@@ -89,10 +89,10 @@ func main() {
 	}
 
 	var emailSettingCount int64
-	db.Model(&models.Setting{}).Where("key = ?", "contact_email").Count(&emailSettingCount)
+	db.Model(&domain.Setting{}).Where("key = ?", "contact_email").Count(&emailSettingCount)
 	if emailSettingCount == 0 {
 		fmt.Println("Seeding default Email contact...")
-		defaultEmailSetting := models.Setting{
+		defaultEmailSetting := domain.Setting{
 			Key:   "contact_email",
 			Value: "",
 		}
@@ -108,19 +108,19 @@ func main() {
 		log.Fatalf("Failed to initialize RSA keys: %v", err)
 	}
 
-	// 6. Instantiate Services
-	authService := services.NewAuthService(userRepo)
-	clientService := services.NewClientService(clientRepo, licenseRepo)
-	licenseService := services.NewLicenseService(licenseRepo, clientRepo, activationLogRepo)
-	activationService := services.NewActivationService(licenseRepo, activationLogRepo, settingRepo)
-	settingService := services.NewSettingService(settingRepo)
+	// 6. Instantiate Usecases
+	authUsecase := usecase.NewAuthUsecase(userRepo)
+	clientUsecase := usecase.NewClientUsecase(clientRepo, licenseRepo)
+	licenseUsecase := usecase.NewLicenseUsecase(licenseRepo, clientRepo, activationLogRepo)
+	activationUsecase := usecase.NewActivationUsecase(licenseRepo, activationLogRepo, settingRepo)
+	settingUsecase := usecase.NewSettingUsecase(settingRepo)
 
 	// 7. Instantiate Controllers
-	authCtrl := controllers.NewAuthController(authService)
-	clientCtrl := controllers.NewClientController(clientService)
-	licenseCtrl := controllers.NewLicenseController(licenseService)
-	activationCtrl := controllers.NewActivationController(activationService)
-	settingCtrl := controllers.NewSettingController(settingService)
+	authCtrl := controllers.NewAuthController(authUsecase)
+	clientCtrl := controllers.NewClientController(clientUsecase)
+	licenseCtrl := controllers.NewLicenseController(licenseUsecase)
+	activationCtrl := controllers.NewActivationController(activationUsecase)
+	settingCtrl := controllers.NewSettingController(settingUsecase)
 
 	// 8. Setup Router
 	r := SetupRouter(authCtrl, clientCtrl, licenseCtrl, activationCtrl, settingCtrl)
