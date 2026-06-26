@@ -1,32 +1,32 @@
-package services
+package usecase
 
 import (
 	"errors"
 	"time"
 
+	"churma-keygen/backend/domain"
 	"churma-keygen/backend/dtos"
 	"churma-keygen/backend/middleware"
-	"churma-keygen/backend/repositories"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService interface {
+type AuthUsecase interface {
 	Login(req dtos.LoginRequest) (*dtos.LoginResponse, error)
 	GetMe(userID, username, role string) (*dtos.UserResponse, error)
 	UpdateProfile(userID string, req dtos.UpdateProfileRequest) error
 }
 
-type authServiceImpl struct {
-	userRepo repositories.UserRepository
+type authUsecaseImpl struct {
+	userRepo domain.UserRepository
 }
 
-func NewAuthService(userRepo repositories.UserRepository) AuthService {
-	return &authServiceImpl{userRepo: userRepo}
+func NewAuthUsecase(userRepo domain.UserRepository) AuthUsecase {
+	return &authUsecaseImpl{userRepo: userRepo}
 }
 
-func (s *authServiceImpl) Login(req dtos.LoginRequest) (*dtos.LoginResponse, error) {
+func (s *authUsecaseImpl) Login(req dtos.LoginRequest) (*dtos.LoginResponse, error) {
 	user, err := s.userRepo.FindByUsername(req.Username)
 	if err != nil {
 		return nil, errors.New("invalid username or password")
@@ -63,7 +63,7 @@ func (s *authServiceImpl) Login(req dtos.LoginRequest) (*dtos.LoginResponse, err
 	}, nil
 }
 
-func (s *authServiceImpl) GetMe(userID, username, role string) (*dtos.UserResponse, error) {
+func (s *authUsecaseImpl) GetMe(userID, username, role string) (*dtos.UserResponse, error) {
 	return &dtos.UserResponse{
 		ID:       userID,
 		Username: username,
@@ -71,7 +71,7 @@ func (s *authServiceImpl) GetMe(userID, username, role string) (*dtos.UserRespon
 	}, nil
 }
 
-func (s *authServiceImpl) UpdateProfile(userID string, req dtos.UpdateProfileRequest) error {
+func (s *authUsecaseImpl) UpdateProfile(userID string, req dtos.UpdateProfileRequest) error {
 	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
 		return errors.New("user tidak ditemukan")

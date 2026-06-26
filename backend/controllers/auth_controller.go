@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"churma-keygen/backend/dtos"
-	"churma-keygen/backend/services"
+	"churma-keygen/backend/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthController struct {
-	authService services.AuthService
+	authUsecase usecase.AuthUsecase
 }
 
-func NewAuthController(authService services.AuthService) *AuthController {
-	return &AuthController{authService: authService}
+func NewAuthController(authUsecase usecase.AuthUsecase) *AuthController {
+	return &AuthController{authUsecase: authUsecase}
 }
 
 func (ctrl *AuthController) Login(c *gin.Context) {
@@ -24,7 +24,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	resp, err := ctrl.authService.Login(req)
+	resp, err := ctrl.authUsecase.Login(req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, dtos.NewErrorResponse(http.StatusUnauthorized, err.Error()))
 		return
@@ -38,7 +38,7 @@ func (ctrl *AuthController) GetMe(c *gin.Context) {
 	role, _ := c.Get("role")
 	userID, _ := c.Get("userID")
 
-	resp, err := ctrl.authService.GetMe(userID.(string), username.(string), role.(string))
+	resp, err := ctrl.authUsecase.GetMe(userID.(string), username.(string), role.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -55,7 +55,7 @@ func (ctrl *AuthController) UpdateProfile(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("userID")
-	err := ctrl.authService.UpdateProfile(userID.(string), req)
+	err := ctrl.authUsecase.UpdateProfile(userID.(string), req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dtos.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return

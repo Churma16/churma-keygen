@@ -33,3 +33,11 @@ type SettingRepository interface {
 	Set(key, value string) error
 }
 
+type UserRepository interface {
+	FindByUsername(username string) (*User, error)
+	FindByID(id string) (*User, error)
+	CountByUsername(username string) (int64, error)
+	Create(user *User) error
+	Update(user *User) error
+}
+
