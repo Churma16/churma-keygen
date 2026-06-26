@@ -12,3 +12,13 @@ type ClientRepository interface {
 	Delete(id uuid.UUID) error
 	Count() (int64, error)
 }
+
+type LicenseRepository interface {
+	FindAll() ([]License, error)
+	FindByCode(code string) (*License, error)
+	FindByID(id uuid.UUID) (*License, error)
+	Create(license *License) error
+	Update(license *License) error
+	Delete(id uuid.UUID) error
+	CountByStatus(status string) (int64, error)
+}

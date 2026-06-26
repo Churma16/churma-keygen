@@ -1,18 +1,15 @@
-package services
+package usecase
 
 import (
-	"crypto/rand"
 	"errors"
-	"fmt"
 
+	"churma-keygen/backend/domain"
 	"churma-keygen/backend/dtos"
-	"churma-keygen/backend/models"
-	"churma-keygen/backend/repositories"
 
 	"github.com/google/uuid"
 )
 
-type LicenseService interface {
+type LicenseUsecase interface {
 	GetAll() ([]dtos.LicenseResponse, error)
 	Generate(req dtos.GenerateLicenseRequest) (*dtos.LicenseResponse, error)
 	UpdateStatus(id string, req dtos.UpdateLicenseStatusRequest) (*dtos.LicenseResponse, error)
@@ -20,25 +17,25 @@ type LicenseService interface {
 	GetActivationLogs() ([]dtos.ActivationLogResponse, error)
 }
 
-type licenseServiceImpl struct {
-	licenseRepo       repositories.LicenseRepository
-	clientRepo        repositories.ClientRepository
-	activationLogRepo repositories.ActivationLogRepository
+type licenseUsecaseImpl struct {
+	licenseRepo       domain.LicenseRepository
+	clientRepo        domain.ClientRepository
+	activationLogRepo domain.ActivationLogRepository
 }
 
-func NewLicenseService(
-	licenseRepo repositories.LicenseRepository,
-	clientRepo repositories.ClientRepository,
-	activationLogRepo repositories.ActivationLogRepository,
-) LicenseService {
-	return &licenseServiceImpl{
+func NewLicenseUsecase(
+	licenseRepo domain.LicenseRepository,
+	clientRepo domain.ClientRepository,
+	activationLogRepo domain.ActivationLogRepository,
+) LicenseUsecase {
+	return &licenseUsecaseImpl{
 		licenseRepo:       licenseRepo,
 		clientRepo:        clientRepo,
 		activationLogRepo: activationLogRepo,
 	}
 }
 
-func (s *licenseServiceImpl) GetAll() ([]dtos.LicenseResponse, error) {
+func (s *licenseUsecaseImpl) GetAll() ([]dtos.LicenseResponse, error) {
 	licenses, err := s.licenseRepo.FindAll()
 	if err != nil {
 		return nil, err
@@ -51,13 +48,12 @@ func (s *licenseServiceImpl) GetAll() ([]dtos.LicenseResponse, error) {
 	return resp, nil
 }
 
-func (s *licenseServiceImpl) Generate(req dtos.GenerateLicenseRequest) (*dtos.LicenseResponse, error) {
+func (s *licenseUsecaseImpl) Generate(req dtos.GenerateLicenseRequest) (*dtos.LicenseResponse, error) {
 	clientUUID, err := uuid.Parse(req.ClientID)
 	if err != nil {
 		return nil, errors.New("invalid client ID format")
 	}
 
-	// Verify client exists
 	client, err := s.clientRepo.FindByID(clientUUID)
 	if err != nil {
 		return nil, errors.New("client not found")
@@ -68,44 +64,32 @@ func (s *licenseServiceImpl) Generate(req dtos.GenerateLicenseRequest) (*dtos.Li
 		trialLimit = 100
 	}
 
-	licenseCode := generateRandomCode()
-
-	license := models.License{
-		ID:          uuid.New(),
-		ClientID:    clientUUID,
-		LicenseCode: licenseCode,
-		TrialLimit:  trialLimit,
-		Status:      "UNASSIGNED",
-		ExpiresAt:   req.ExpiresAt,
+	license := &domain.License{
+		ID:         uuid.New(),
+		ClientID:   clientUUID,
+		TrialLimit: trialLimit,
+		Status:     "UNASSIGNED",
+		ExpiresAt:  req.ExpiresAt,
 	}
 
-	err = s.licenseRepo.Create(&license)
+	// Delegate to domain
+	license.GenerateRandomCode()
+
+	err = s.licenseRepo.Create(license)
 	if err != nil {
 		return nil, errors.New("failed to generate license key")
 	}
 
-	// Attach preloaded client
 	license.Client = client
 
-	res := mapLicenseToResponse(license)
+	res := mapLicenseToResponse(*license)
 	return &res, nil
 }
 
-func (s *licenseServiceImpl) UpdateStatus(id string, req dtos.UpdateLicenseStatusRequest) (*dtos.LicenseResponse, error) {
+func (s *licenseUsecaseImpl) UpdateStatus(id string, req dtos.UpdateLicenseStatusRequest) (*dtos.LicenseResponse, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, errors.New("invalid license ID format")
-	}
-
-	// Validate status
-	validStatuses := map[string]bool{
-		"UNASSIGNED": true,
-		"ACTIVE":     true,
-		"SUSPENDED":  true,
-		"REVOKED":    true,
-	}
-	if !validStatuses[req.Status] {
-		return nil, errors.New("invalid status. Must be UNASSIGNED, ACTIVE, SUSPENDED, or REVOKED")
 	}
 
 	license, err := s.licenseRepo.FindByID(uid)
@@ -113,10 +97,9 @@ func (s *licenseServiceImpl) UpdateStatus(id string, req dtos.UpdateLicenseStatu
 		return nil, errors.New("license not found")
 	}
 
-	license.Status = req.Status
-	if req.Status == "UNASSIGNED" {
-		license.HardwareID = ""
-		license.ActivatedAt = nil
+	// Delegate logic to domain
+	if err := license.UpdateStatus(req.Status); err != nil {
+		return nil, err
 	}
 
 	err = s.licenseRepo.Update(license)
@@ -128,7 +111,7 @@ func (s *licenseServiceImpl) UpdateStatus(id string, req dtos.UpdateLicenseStatu
 	return &res, nil
 }
 
-func (s *licenseServiceImpl) Delete(id string) error {
+func (s *licenseUsecaseImpl) Delete(id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return errors.New("invalid license ID format")
@@ -142,7 +125,7 @@ func (s *licenseServiceImpl) Delete(id string) error {
 	return s.licenseRepo.Delete(uid)
 }
 
-func (s *licenseServiceImpl) GetActivationLogs() ([]dtos.ActivationLogResponse, error) {
+func (s *licenseUsecaseImpl) GetActivationLogs() ([]dtos.ActivationLogResponse, error) {
 	logs, err := s.activationLogRepo.FindAll(100)
 	if err != nil {
 		return nil, err
@@ -155,18 +138,7 @@ func (s *licenseServiceImpl) GetActivationLogs() ([]dtos.ActivationLogResponse, 
 	return resp, nil
 }
 
-func generateRandomCode() string {
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	result := make([]byte, 12)
-	bytes := make([]byte, 12)
-	_, _ = rand.Read(bytes)
-	for i, b := range bytes {
-		result[i] = chars[b%byte(len(chars))]
-	}
-	return fmt.Sprintf("SFA-%s-%s-%s", string(result[0:4]), string(result[4:8]), string(result[8:12]))
-}
-
-func mapLicenseToResponse(l models.License) dtos.LicenseResponse {
+func mapLicenseToResponse(l domain.License) dtos.LicenseResponse {
 	clientName := ""
 	if l.Client != nil {
 		clientName = l.Client.Name
@@ -186,7 +158,7 @@ func mapLicenseToResponse(l models.License) dtos.LicenseResponse {
 	}
 }
 
-func mapActivationLogToResponse(al models.ActivationLog) dtos.ActivationLogResponse {
+func mapActivationLogToResponse(al domain.ActivationLog) dtos.ActivationLogResponse {
 	clientName := ""
 	if al.License != nil && al.License.Client != nil {
 		clientName = al.License.Client.Name

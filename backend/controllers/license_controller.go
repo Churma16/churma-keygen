@@ -4,21 +4,21 @@ import (
 	"net/http"
 
 	"churma-keygen/backend/dtos"
-	"churma-keygen/backend/services"
+	"churma-keygen/backend/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 type LicenseController struct {
-	licenseService services.LicenseService
+	licenseUsecase usecase.LicenseUsecase
 }
 
-func NewLicenseController(licenseService services.LicenseService) *LicenseController {
-	return &LicenseController{licenseService: licenseService}
+func NewLicenseController(licenseUsecase usecase.LicenseUsecase) *LicenseController {
+	return &LicenseController{licenseUsecase: licenseUsecase}
 }
 
 func (ctrl *LicenseController) GetLicenses(c *gin.Context) {
-	licenses, err := ctrl.licenseService.GetAll()
+	licenses, err := ctrl.licenseUsecase.GetAll()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch licenses"))
 		return
@@ -34,7 +34,7 @@ func (ctrl *LicenseController) GenerateLicense(c *gin.Context) {
 		return
 	}
 
-	license, err := ctrl.licenseService.Generate(req)
+	license, err := ctrl.licenseUsecase.Generate(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -51,7 +51,7 @@ func (ctrl *LicenseController) UpdateLicenseStatus(c *gin.Context) {
 		return
 	}
 
-	license, err := ctrl.licenseService.UpdateStatus(id, req)
+	license, err := ctrl.licenseUsecase.UpdateStatus(id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -62,7 +62,7 @@ func (ctrl *LicenseController) UpdateLicenseStatus(c *gin.Context) {
 
 func (ctrl *LicenseController) DeleteLicense(c *gin.Context) {
 	id := c.Param("id")
-	err := ctrl.licenseService.Delete(id)
+	err := ctrl.licenseUsecase.Delete(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -72,7 +72,7 @@ func (ctrl *LicenseController) DeleteLicense(c *gin.Context) {
 }
 
 func (ctrl *LicenseController) GetActivationLogs(c *gin.Context) {
-	logs, err := ctrl.licenseService.GetActivationLogs()
+	logs, err := ctrl.licenseUsecase.GetActivationLogs()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch activation logs"))
 		return

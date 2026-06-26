@@ -1,38 +1,28 @@
 package repositories
 
 import (
-	"churma-keygen/backend/models"
+	"churma-keygen/backend/domain"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type LicenseRepository interface {
-	FindAll() ([]models.License, error)
-	FindByID(id uuid.UUID) (*models.License, error)
-	FindByCode(code string) (*models.License, error)
-	Create(license *models.License) error
-	Update(license *models.License) error
-	Delete(id uuid.UUID) error
-	CountByStatus(status string) (int64, error)
-}
-
 type GormLicenseRepository struct {
 	db *gorm.DB
 }
 
-func NewLicenseRepository(db *gorm.DB) LicenseRepository {
+func NewLicenseRepository(db *gorm.DB) domain.LicenseRepository {
 	return &GormLicenseRepository{db: db}
 }
 
-func (r *GormLicenseRepository) FindAll() ([]models.License, error) {
-	var licenses []models.License
+func (r *GormLicenseRepository) FindAll() ([]domain.License, error) {
+	var licenses []domain.License
 	err := r.db.Preload("Client").Order("created_at DESC").Find(&licenses).Error
 	return licenses, err
 }
 
-func (r *GormLicenseRepository) FindByID(id uuid.UUID) (*models.License, error) {
-	var license models.License
+func (r *GormLicenseRepository) FindByID(id uuid.UUID) (*domain.License, error) {
+	var license domain.License
 	err := r.db.Preload("Client").First(&license, "id = ?", id).Error
 	if err != nil {
 		return nil, err
@@ -40,8 +30,8 @@ func (r *GormLicenseRepository) FindByID(id uuid.UUID) (*models.License, error) 
 	return &license, nil
 }
 
-func (r *GormLicenseRepository) FindByCode(code string) (*models.License, error) {
-	var license models.License
+func (r *GormLicenseRepository) FindByCode(code string) (*domain.License, error) {
+	var license domain.License
 	err := r.db.Preload("Client").Where("license_code = ?", code).First(&license).Error
 	if err != nil {
 		return nil, err
@@ -49,20 +39,20 @@ func (r *GormLicenseRepository) FindByCode(code string) (*models.License, error)
 	return &license, nil
 }
 
-func (r *GormLicenseRepository) Create(license *models.License) error {
+func (r *GormLicenseRepository) Create(license *domain.License) error {
 	return r.db.Create(license).Error
 }
 
-func (r *GormLicenseRepository) Update(license *models.License) error {
+func (r *GormLicenseRepository) Update(license *domain.License) error {
 	return r.db.Save(license).Error
 }
 
 func (r *GormLicenseRepository) Delete(id uuid.UUID) error {
-	return r.db.Delete(&models.License{}, "id = ?", id).Error
+	return r.db.Delete(&domain.License{}, "id = ?", id).Error
 }
 
 func (r *GormLicenseRepository) CountByStatus(status string) (int64, error) {
 	var count int64
-	err := r.db.Model(&models.License{}).Where("status = ?", status).Count(&count).Error
+	err := r.db.Model(&domain.License{}).Where("status = ?", status).Count(&count).Error
 	return count, err
 }
