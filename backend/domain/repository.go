@@ -28,3 +28,8 @@ type ActivationLogRepository interface {
 	Create(log *ActivationLog) error
 }
 
+type SettingRepository interface {
+	Get(key string) (*Setting, error)
+	Set(key, value string) error
+}
+

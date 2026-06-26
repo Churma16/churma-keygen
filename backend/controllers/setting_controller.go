@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"churma-keygen/backend/dtos"
-	"churma-keygen/backend/services"
+	"churma-keygen/backend/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 type SettingController struct {
-	settingService services.SettingService
+	settingUsecase usecase.SettingUsecase
 }
 
-func NewSettingController(settingService services.SettingService) *SettingController {
-	return &SettingController{settingService: settingService}
+func NewSettingController(settingUsecase usecase.SettingUsecase) *SettingController {
+	return &SettingController{settingUsecase: settingUsecase}
 }
 
 func (ctrl *SettingController) GetSetting(c *gin.Context) {
@@ -24,7 +24,7 @@ func (ctrl *SettingController) GetSetting(c *gin.Context) {
 		return
 	}
 
-	setting, err := ctrl.settingService.GetSetting(key)
+	setting, err := ctrl.settingUsecase.GetSetting(key)
 	if err != nil {
 		c.JSON(http.StatusNotFound, dtos.NewErrorResponse(http.StatusNotFound, "Setting not found"))
 		return
@@ -46,7 +46,7 @@ func (ctrl *SettingController) UpdateSetting(c *gin.Context) {
 		return
 	}
 
-	setting, err := ctrl.settingService.UpdateSetting(key, req.Value)
+	setting, err := ctrl.settingUsecase.UpdateSetting(key, req.Value)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return

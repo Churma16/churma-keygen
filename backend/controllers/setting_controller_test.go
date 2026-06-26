@@ -13,7 +13,7 @@ import (
 	"churma-keygen/backend/middleware"
 	"churma-keygen/backend/models"
 	"churma-keygen/backend/repositories"
-	"churma-keygen/backend/services"
+	"churma-keygen/backend/usecase"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -34,8 +34,8 @@ func setupSettingTestEnvironment(t *testing.T) (*gin.Engine, *gorm.DB) {
 	}
 
 	settingRepo := repositories.NewSettingRepository(db)
-	settingService := services.NewSettingService(settingRepo)
-	settingCtrl := NewSettingController(settingService)
+	settingUsecase := usecase.NewSettingUsecase(settingRepo)
+	settingCtrl := NewSettingController(settingUsecase)
 
 	// Seed setting
 	db.Create(&models.Setting{Key: "contact_whatsapp", Value: "6281234567890"})
