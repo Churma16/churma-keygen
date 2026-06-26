@@ -1,16 +1,15 @@
-package services
+package usecase
 
 import (
 	"errors"
 
 	"churma-keygen/backend/dtos"
-	"churma-keygen/backend/models"
-	"churma-keygen/backend/repositories"
+	"churma-keygen/backend/domain"
 
 	"github.com/google/uuid"
 )
 
-type ClientService interface {
+type ClientUsecase interface {
 	GetAll() ([]dtos.ClientResponse, error)
 	Create(req dtos.CreateClientRequest) (*dtos.ClientResponse, error)
 	Update(id string, req dtos.UpdateClientRequest) (*dtos.ClientResponse, error)
@@ -18,19 +17,19 @@ type ClientService interface {
 	GetStats() (*dtos.ClientStatsResponse, error)
 }
 
-type clientServiceImpl struct {
-	clientRepo  repositories.ClientRepository
-	licenseRepo repositories.LicenseRepository
+type clientUsecaseImpl struct {
+	clientRepo  domain.ClientRepository
+	licenseRepo domain.LicenseRepository
 }
 
-func NewClientService(clientRepo repositories.ClientRepository, licenseRepo repositories.LicenseRepository) ClientService {
-	return &clientServiceImpl{
+func NewClientUsecase(clientRepo domain.ClientRepository, licenseRepo domain.LicenseRepository) ClientUsecase {
+	return &clientUsecaseImpl{
 		clientRepo:  clientRepo,
 		licenseRepo: licenseRepo,
 	}
 }
 
-func (s *clientServiceImpl) GetAll() ([]dtos.ClientResponse, error) {
+func (s *clientUsecaseImpl) GetAll() ([]dtos.ClientResponse, error) {
 	clients, err := s.clientRepo.FindAll()
 	if err != nil {
 		return nil, err
@@ -43,8 +42,8 @@ func (s *clientServiceImpl) GetAll() ([]dtos.ClientResponse, error) {
 	return resp, nil
 }
 
-func (s *clientServiceImpl) Create(req dtos.CreateClientRequest) (*dtos.ClientResponse, error) {
-	client := models.Client{
+func (s *clientUsecaseImpl) Create(req dtos.CreateClientRequest) (*dtos.ClientResponse, error) {
+	client := domain.Client{
 		ID:        uuid.New(),
 		Name:      req.Name,
 		OwnerName: req.OwnerName,
@@ -66,7 +65,7 @@ func (s *clientServiceImpl) Create(req dtos.CreateClientRequest) (*dtos.ClientRe
 	}, nil
 }
 
-func (s *clientServiceImpl) Update(id string, req dtos.UpdateClientRequest) (*dtos.ClientResponse, error) {
+func (s *clientUsecaseImpl) Update(id string, req dtos.UpdateClientRequest) (*dtos.ClientResponse, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, errors.New("invalid client ID format")
@@ -90,7 +89,7 @@ func (s *clientServiceImpl) Update(id string, req dtos.UpdateClientRequest) (*dt
 	return &res, nil
 }
 
-func (s *clientServiceImpl) Delete(id string) error {
+func (s *clientUsecaseImpl) Delete(id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
 		return errors.New("invalid client ID format")
@@ -104,7 +103,7 @@ func (s *clientServiceImpl) Delete(id string) error {
 	return s.clientRepo.Delete(uid)
 }
 
-func (s *clientServiceImpl) GetStats() (*dtos.ClientStatsResponse, error) {
+func (s *clientUsecaseImpl) GetStats() (*dtos.ClientStatsResponse, error) {
 	totalClients, err := s.clientRepo.Count()
 	if err != nil {
 		return nil, err
@@ -124,7 +123,7 @@ func (s *clientServiceImpl) GetStats() (*dtos.ClientStatsResponse, error) {
 	}, nil
 }
 
-func mapClientToResponse(c models.Client) dtos.ClientResponse {
+func mapClientToResponse(c domain.Client) dtos.ClientResponse {
 	var licenses []dtos.LicenseResponse
 	for _, l := range c.Licenses {
 		licenses = append(licenses, mapLicenseToResponse(l))

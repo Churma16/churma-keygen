@@ -4,21 +4,21 @@ import (
 	"net/http"
 
 	"churma-keygen/backend/dtos"
-	"churma-keygen/backend/services"
+	"churma-keygen/backend/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 type ClientController struct {
-	clientService services.ClientService
+	clientUsecase usecase.ClientUsecase
 }
 
-func NewClientController(clientService services.ClientService) *ClientController {
-	return &ClientController{clientService: clientService}
+func NewClientController(clientUsecase usecase.ClientUsecase) *ClientController {
+	return &ClientController{clientUsecase: clientUsecase}
 }
 
 func (ctrl *ClientController) GetClients(c *gin.Context) {
-	clients, err := ctrl.clientService.GetAll()
+	clients, err := ctrl.clientUsecase.GetAll()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch clients"))
 		return
@@ -28,7 +28,7 @@ func (ctrl *ClientController) GetClients(c *gin.Context) {
 }
 
 func (ctrl *ClientController) GetClientStats(c *gin.Context) {
-	stats, err := ctrl.clientService.GetStats()
+	stats, err := ctrl.clientUsecase.GetStats()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch client statistics"))
 		return
@@ -44,7 +44,7 @@ func (ctrl *ClientController) CreateClient(c *gin.Context) {
 		return
 	}
 
-	client, err := ctrl.clientService.Create(req)
+	client, err := ctrl.clientUsecase.Create(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, "Failed to create client"))
 		return
@@ -61,7 +61,7 @@ func (ctrl *ClientController) UpdateClient(c *gin.Context) {
 		return
 	}
 
-	client, err := ctrl.clientService.Update(id, req)
+	client, err := ctrl.clientUsecase.Update(id, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
@@ -72,7 +72,7 @@ func (ctrl *ClientController) UpdateClient(c *gin.Context) {
 
 func (ctrl *ClientController) DeleteClient(c *gin.Context) {
 	id := c.Param("id")
-	err := ctrl.clientService.Delete(id)
+	err := ctrl.clientUsecase.Delete(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
