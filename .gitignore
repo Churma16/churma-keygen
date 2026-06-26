@@ -4,3 +4,5 @@
 /backend/private_key.pem
 
 frontend/src/components/grep.exe.stackdump
+*.exe
+/tmp
